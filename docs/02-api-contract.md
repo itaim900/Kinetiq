@@ -1,0 +1,213 @@
+# User-Client API Contract — Fit App (v1)
+
+**Status:** Approved (design phase)
+**Last updated:** 2026-06-23
+**Related:** [`01-data-model.md`](./01-data-model.md)
+
+This is the public HTTP/REST contract between the React frontend and the C++ backend.
+It is written contract-first: every endpoint lists the **test cases** it must satisfy, so
+the test suite can be written before the implementation (TDD).
+
+---
+
+## Architectural Context
+
+The backend follows **Ports & Adapters (Hexagonal Architecture)**. Core logic depends on
+interfaces ("ports"); concrete implementations ("adapters") for Postgres, the LLM provider,
+and HTTP are plugged in at the edges. In tests, real adapters are replaced with fakes/mocks.
+This is what makes the codebase test-driven.
+
+### Test layers
+
+| Layer | Backend (C++ / GoogleTest) | Frontend (React / Vitest) |
+|---|---|---|
+| Unit | services, validators, calorie engine, JWT, safety filter — against mocked ports | components, hooks (+ React Testing Library) |
+| Integration | repositories against an ephemeral Postgres (Docker) | API client against a mock server (MSW) driven by this contract |
+| Contract / E2E | boot the app, hit real endpoints, assert against this contract | key full flows |
+
+---
+
+## Conventions
+
+- **Base path:** `/api/v1` (URL versioning).
+- **Auth:** JWT in `Authorization: Bearer <token>`. Endpoints marked 🔒 require it.
+  - **v1 uses short-lived access tokens only (no refresh tokens).** On expiry the user
+    re-authenticates. Refresh tokens are a planned later-phase enhancement.
+- **Content type:** `application/json`.
+- **Units:** always metric on the wire (`*_kg`, `*_cm`). The frontend converts for display
+  based on `unit_preference`.
+- **Error shape** (RFC 9457 Problem Details):
+
+```json
+{
+  "type": "validation_error",
+  "title": "Validation failed",
+  "status": 422,
+  "detail": "One or more fields are invalid.",
+  "errors": { "email": ["must be a valid email address"] }
+}
+```
+
+- **Status codes:** `200` ok · `201` created · `204` no content · `400` malformed ·
+  `401` unauthenticated · `403` forbidden · `404` not found · `409` conflict ·
+  `422` validation · `500` server · `502` upstream (LLM) failure.
+
+---
+
+## Auth
+
+### `POST /auth/register`
+Request: `{ email, password, display_name }`
+Response `201`: `{ user, access_token }`
+
+Test cases:
+- ✅ valid input → `201`, returns token; `password`/`password_hash` never appear in response
+- ❌ duplicate email → `409`
+- ❌ invalid email or weak password → `422` with field errors
+- ❌ missing required field → `422`
+
+### `POST /auth/login`
+Request: `{ email, password }`
+Response `200`: `{ user, access_token }`
+
+Test cases:
+- ✅ correct credentials → `200` + token
+- ❌ wrong password → `401`, generic message (never reveal if the email exists)
+- ❌ unknown email → `401`, identical message
+
+### `GET /auth/me` 🔒
+Response `200`: current user profile.
+
+Test cases:
+- ✅ valid token → `200`
+- ❌ missing / expired / invalid token → `401`
+
+---
+
+## Profile & Biometrics
+
+### `GET /users/me` 🔒
+Returns full profile: biometrics, preferences, `experience_level`, goals.
+
+### `PATCH /users/me` 🔒
+Partial update. Request (any subset):
+`{ height_cm, weight_kg, birth_date, sex, experience_level, unit_preference,
+   weekly_workout_goal, available_time_minutes, preferences, medications }`
+
+Test cases:
+- ✅ partial update changes only provided fields → `200`
+- ❌ `weight_kg` negative or out of range → `422`
+- ❌ `experience_level` not in `{beginner,intermediate,advanced}` → `422`
+- ❌ unauthenticated → `401`
+
+---
+
+## Injuries (drives the rule-based safety filter)
+
+### `GET /users/me/injuries` 🔒 — list
+### `POST /users/me/injuries` 🔒
+Request: `{ body_region, severity, notes }` → `201`
+### `PATCH /users/me/injuries/{id}` 🔒 — e.g. set `active: false` when healed
+### `DELETE /users/me/injuries/{id}` 🔒 → `204`
+
+Test cases:
+- ✅ create injury → appears in list
+- ❌ `severity` not in `{mild,moderate,severe}` → `422`
+- ❌ PATCH/DELETE an injury owned by another user → `404` (do not leak existence)
+
+---
+
+## Exercise Catalog (read-only for clients)
+
+### `GET /exercises` 🔒 — filterable, paginated
+Query: `?muscle=chest&equipment=barbell&type=strength&difficulty=3&page=1&page_size=20`
+Response: `{ items: [...], page, page_size, total }`
+
+Test cases:
+- ✅ no filters → paginated full list
+- ✅ `muscle=chest` → only exercises targeting chest
+- ✅ combined filters → correct intersection
+- ✅ `page_size` capped at a maximum (e.g. 100)
+
+### `GET /exercises/{id}` 🔒
+Full detail incl. muscles, equipment, instructions, media.
+
+Test cases:
+- ✅ existing id → `200`
+- ❌ unknown id → `404`
+
+---
+
+## Workouts
+
+### `GET /workouts` 🔒
+User's workouts, filterable by `status`.
+
+### `GET /workouts/{id}` 🔒
+Workout + ordered exercises with prescriptions.
+
+Test cases:
+- ❌ another user's workout → `404`
+
+### `POST /workouts` 🔒 — manual create
+Request:
+```json
+{
+  "name": "Push Day",
+  "workout_type": "strength",
+  "target_environment": "commercial_gym",
+  "exercises": [
+    { "exercise_id": 12, "sets": 4, "target_reps_min": 8, "target_reps_max": 12,
+      "target_weight_kg": 60, "rest_seconds": 120, "order_index": 0 }
+  ]
+}
+```
+Response `201` (with `source = "manual"`).
+
+Test cases:
+- ✅ valid → `201`, `source = "manual"`
+- ❌ references a non-existent `exercise_id` → `422`
+
+### `PATCH /workouts/{id}` 🔒
+Rename, change `status` (`active`/`archived`), reorder/edit exercises.
+
+### `DELETE /workouts/{id}` 🔒 → `204`
+
+### `POST /workouts/generate` 🔒 — the Phase 3 AI endpoint
+**Synchronous in v1**: the client waits for the LLM (~2–10s) and receives the workout in the
+same response.
+
+Request: `{ workout_type, target_environment, focus_muscles?: [], exclude_muscles?: [], notes? }`
+
+Flow:
+1. Load user profile.
+2. **Rule-based safety filter** removes contraindicated exercises (JOIN on `User_Injuries` ⨝ `Exercise_Contraindications`).
+3. Build the LLM payload from the filtered pool + constraints.
+4. Call the LLM via the `ILLMClient` port.
+5. **Validate** the response; on failure, retry with feedback (self-correction) up to N times.
+6. Persist the workout + the `Generation_Requests` audit row.
+7. Return the workout (including `generation_request_id`).
+
+Test cases (run against a **mocked `ILLMClient`** — fast, free, deterministic):
+- ✅ valid request + valid mocked response → `201` workout linked to a `Generation_Requests` row
+- ✅ a contraindicated exercise (user has `lower_back` injury) is **never** in the result, even if the mock LLM returns one → rejected by validation
+- ✅ mock LLM returns malformed JSON → backend retries; after N failures → `502`, failure logged in `Generation_Requests`
+- ✅ generated total duration respects `available_time_minutes`
+- ❌ unauthenticated → `401`
+
+---
+
+## Deferred to later phases
+
+- **Refresh tokens** (silent re-auth) — enhancement to the auth scheme above.
+- **Asynchronous `/generate`** (`202 Accepted` + job polling / SSE) — only if latency becomes a problem.
+- **Workout history & feedback endpoints** (Phase 4): logging completed sessions, RPE, set-level logs.
+- **Friend workout updates** (Phase 4): motivational feed, no biometric/medical data exposed.
+
+---
+
+## Next artifact
+
+Formalize this contract as an **OpenAPI** file (`docs/openapi.yaml`) once the `/generate`
+shape is finalized by the LLM port design. OpenAPI enables auto-generated docs, generated
+TypeScript client types, mock servers, and contract tests.
