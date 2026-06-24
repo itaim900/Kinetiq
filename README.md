@@ -22,6 +22,16 @@ experience level, available equipment, and schedule.
 └── docs/       # Design docs, architecture notes, decisions
 ```
 
+## Design docs
+
+The project is being designed before implementation. See [`docs/`](./docs):
+
+- [`01-data-model.md`](./docs/01-data-model.md) — database schema, ER diagram, design principles
+- [`02-api-contract.md`](./docs/02-api-contract.md) — REST API contract (contract-first, with test cases)
+- [`03-llm-port.md`](./docs/03-llm-port.md) — AI subsystem: LLM port, validation, weight engine
+- [`04-architecture.md`](./docs/04-architecture.md) — system architecture (Ports & Adapters), folder layout
+- [`adr/`](./docs/adr/README.md) — Architecture Decision Records
+
 ## Status
 
-Early planning stage.
+Design phase — architecture and contracts defined; implementation not yet started.
