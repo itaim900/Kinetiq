@@ -1,0 +1,23 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: fitapp-postgres
+    environment:
+      POSTGRES_DB: fitapp
+      POSTGRES_USER: fitapp
+      POSTGRES_PASSWORD: fitapp
+    ports:
+      # Host port is configurable to avoid clashing with a local Postgres.
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
+    volumes:
+      - fitapp_pgdata:/var/lib/postgresql/data
+      # On first init (empty data dir), Postgres runs these .sql files in order.
+      - ./backend/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fitapp -d fitapp"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  fitapp_pgdata:

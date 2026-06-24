@@ -1,6 +1,10 @@
 # ADR-0003: C++ web framework is Drogon
 
-**Status:** Accepted · **Date:** 2026-06-24
+**Status:** Superseded by [ADR-0011](./0011-web-framework-crow.md) · **Date:** 2026-06-24
+
+> **Superseded:** During the Phase-1 toolchain spike, building Drogon from source on the 8 GB dev
+> machine proved impractical (out-of-memory, ~1h builds), and MSYS2 ships no Drogon package. The
+> HTTP layer was switched to **Crow**. See [ADR-0011](./0011-web-framework-crow.md).
 
 ## Context
 

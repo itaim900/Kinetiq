@@ -1,6 +1,10 @@
 # ADR-0005: Build system is CMake, dependencies via vcpkg
 
-**Status:** Accepted · **Date:** 2026-06-24
+**Status:** Superseded by [ADR-0012](./0012-toolchain-msys2.md) · **Date:** 2026-06-24
+
+> **Superseded:** The Phase-1 spike showed vcpkg's from-source dependency builds (OpenSSL, libpq,
+> Drogon) are too heavy for the 8 GB dev machine. Dependencies now come prebuilt from **MSYS2
+> (pacman)**; CMake is retained. See [ADR-0012](./0012-toolchain-msys2.md).
 
 ## Context
 
