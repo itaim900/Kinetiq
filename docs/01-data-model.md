@@ -41,6 +41,7 @@ erDiagram
     Exercises ||--o{ Exercise_Equipment : needs
     Equipment ||--o{ Exercise_Equipment : "used by"
     Exercises ||--o{ Exercise_Contraindications : "unsafe for"
+    Exercises ||--o{ Exercise_Strength_Norms : "has norms"
 
     Workouts  ||--o{ Workout_Exercises : contains
     Exercises ||--o{ Workout_Exercises : "instantiated in"
@@ -127,7 +128,14 @@ erDiagram
         int target_reps_min
         int target_reps_max
         numeric target_weight_kg
+        text weight_source
         int rest_seconds
+    }
+    Exercise_Strength_Norms {
+        bigint exercise_id FK
+        text sex
+        text experience_level
+        numeric bodyweight_multiplier
     }
     Generation_Requests {
         bigint id PK
@@ -226,6 +234,25 @@ The core exercise catalogue. Seeded manually; updated by admin tooling.
 
 ---
 
+### `Exercise_Strength_Norms`
+Reference data for the deterministic **Starting-Weight Engine**. For exercises with published
+strength standards (mostly compound barbell/dumbbell lifts), this stores a typical working
+weight as a multiple of bodyweight, broken down by sex and experience level.
+
+| Column | Type | Notes |
+|---|---|---|
+| `exercise_id` | `BIGINT` FK | Composite PK with `sex` + `experience_level`. |
+| `sex` | `TEXT` | `CHECK IN ('male','female')` — norms are sex-specific. |
+| `experience_level` | `TEXT` | `CHECK IN ('beginner','intermediate','advanced')` |
+| `bodyweight_multiplier` | `NUMERIC(4,2)` | Suggested weight = `multiplier × user.weight_kg`, rounded to the nearest plate increment (2.5 kg). |
+
+Coverage is intentionally partial: only exercises with credible norms get rows. Exercises with
+no row (accessories, machines, bodyweight movements) fall back to user-entered weight. The LLM
+never sets weights — this engine does, deterministically, *after* generation. See
+[`docs/03-llm-port.md`](./03-llm-port.md).
+
+---
+
 ### `Workouts`
 A workout plan — AI-generated or manually created.
 
@@ -240,7 +267,15 @@ A workout plan — AI-generated or manually created.
 ### `Workout_Exercises`
 The junction table. One row per exercise slot in a workout, carrying the AI-customised prescription.
 
-`target_weight_kg` is nullable — bodyweight exercises have no weight target.
+`target_weight_kg` is nullable. Its companion `weight_source` records *where the number came from*:
+
+| `weight_source` | Meaning | Frontend behaviour |
+|---|---|---|
+| `body_type_estimate` | Filled by the Starting-Weight Engine from `Exercise_Strength_Norms` | Show "starting weight is an average for your body type — adjust to your liking" |
+| `needs_user_input` | No norm available, or insufficient profile data; `target_weight_kg` is `NULL` | Prompt the user to enter a target weight |
+| `user_set` | The user manually set or edited the weight | Show the value as-is |
+
+In all cases the user can change the weight; doing so flips `weight_source` to `user_set`.
 
 ---
 

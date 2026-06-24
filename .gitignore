@@ -29,6 +29,9 @@ coverage/
 *.key
 *.pem
 
+# ---- Personal learning notes (not tracked for now) ----
+docs/learning/
+
 # ---- Editor / OS ----
 .vscode/
 .idea/

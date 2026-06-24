@@ -183,16 +183,23 @@ Flow:
 1. Load user profile.
 2. **Rule-based safety filter** removes contraindicated exercises (JOIN on `User_Injuries` ⨝ `Exercise_Contraindications`).
 3. Build the LLM payload from the filtered pool + constraints.
-4. Call the LLM via the `ILLMClient` port.
+4. Call the LLM via the `ILLMClient` port. The LLM returns structure only (exercises, sets, reps, rest) — **never weights**.
 5. **Validate** the response; on failure, retry with feedback (self-correction) up to N times.
-6. Persist the workout + the `Generation_Requests` audit row.
-7. Return the workout (including `generation_request_id`).
+6. **Deterministic Starting-Weight Engine** fills `target_weight_kg` + `weight_source` per exercise: if the user has sex + bodyweight and the exercise has a strength norm, suggest `multiplier × bodyweight` (`weight_source = "body_type_estimate"`); otherwise leave `null` (`weight_source = "needs_user_input"`).
+7. Persist the workout + the `Generation_Requests` audit row.
+8. Return the workout (including `generation_request_id` and per-exercise `weight_source`).
+
+Each workout exercise in responses carries `target_weight_kg` and `weight_source`
+(`body_type_estimate` | `needs_user_input` | `user_set`) so the client can show the right
+message. The user can always override the weight, which sets `weight_source = "user_set"`.
 
 Test cases (run against a **mocked `ILLMClient`** — fast, free, deterministic):
 - ✅ valid request + valid mocked response → `201` workout linked to a `Generation_Requests` row
 - ✅ a contraindicated exercise (user has `lower_back` injury) is **never** in the result, even if the mock LLM returns one → rejected by validation
 - ✅ mock LLM returns malformed JSON → backend retries; after N failures → `502`, failure logged in `Generation_Requests`
 - ✅ generated total duration respects `available_time_minutes`
+- ✅ user with sex + bodyweight + a normed exercise → `target_weight_kg` set, `weight_source = "body_type_estimate"`
+- ✅ user missing sex/bodyweight, or non-normed exercise → `target_weight_kg = null`, `weight_source = "needs_user_input"`
 - ❌ unauthenticated → `401`
 
 ---
