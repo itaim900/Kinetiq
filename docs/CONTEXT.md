@@ -25,6 +25,9 @@ only, with schema validation + self-correction. Auth: short-lived JWT (v1).
 **Phase 1 "walking skeleton" COMPLETE & verified end-to-end:** React → Vite proxy → Crow backend →
 libpqxx → Postgres. `GET /api/v1/health` → `{"status":"ok","db":"connected"}`. Backend + frontend
 test harnesses green. First migration applied. No features yet.
+**CI green** (`.github/workflows/ci.yml`: builds+tests both halves on Ubuntu).
+**Containerized**: multi-stage Dockerfiles for backend + frontend; `docker-compose.prod.yml` runs the
+whole stack; `.github/workflows/images.yml` builds + pushes images to **GHCR** on push to main.
 
 ## Machine constraints (important)
 - **8 GB RAM.** Do NOT run a heavy C++ build and Docker simultaneously (caused OOM crashes).
@@ -39,6 +42,12 @@ test harnesses green. First migration applied. No features yet.
   0005)**.
 - Postgres stays in Docker (ADR-0004). Native MSYS2 Postgres was broken by a `pacman -Sy` partial
   upgrade — always use `pacman -Syu`.
+- **libpqxx on Linux**: Ubuntu's `libpqxx-dev` 7.8.1 has a header/lib `std::source_location` mismatch
+  that breaks linking. So CMake option `FITAPP_FETCH_LIBPQXX=ON` builds libpqxx from source (pinned
+  7.9.2) for CI + Docker; local MSYS2 keeps the prebuilt (option OFF).
+- **Images built in CI, not locally** — the libpqxx-from-source compile OOMs on the 8 GB host, so the
+  heavy build runs on GitHub runners; the host only pulls + runs. Backend `BIND_ADDR` env defaults to
+  127.0.0.1 (local) and is set to 0.0.0.0 in the container so the frontend can reach it.
 
 ## Docs map (`docs/`)
 - `01-data-model.md` — DB schema + ER diagram
@@ -54,10 +63,14 @@ test harnesses green. First migration applied. No features yet.
 Repo `itaim900/Fit-App`. Backlog = **4 milestones** (Phase 0–3) + **38 issues** + labels.
 
 ## How to run
-See `docs/learning/how-to-run.md`. Short: `docker compose up -d` → build & run backend
-(`cmake --preset default && cmake --build --preset default`, then `./build/fitapp_server.exe`) →
-`npm run dev` in `frontend/` → open localhost:5173.
+See `docs/learning/how-to-run.md`. Two ways:
+- **Dev (fast iteration):** `docker compose up -d` (Postgres) → build & run backend
+  (`cmake --preset default && cmake --build --preset default`, then `./build/fitapp_server.exe`) →
+  `npm run dev` in `frontend/` → open localhost:5173.
+- **Whole app via containers:** `docker compose -f docker-compose.prod.yml pull && up -d` →
+  open localhost:3000. (Pulling needs the GHCR packages public, or `docker login ghcr.io` with a
+  `read:packages` token.)
 
 ## Next steps
-Phase 1 leftover: **GitHub Actions CI**. Then **Phase 2** (auth, profile, exercise catalog, manual
+Phase 1 fully done (CI + containers). Next: **Phase 2** (auth, profile, exercise catalog, manual
 workouts) built test-first per `02-api-contract.md`.

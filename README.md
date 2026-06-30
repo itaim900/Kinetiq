@@ -25,9 +25,10 @@ experience level, available equipment, and schedule.
 │   ├── third_party/    # vendored headers (Crow)
 │   ├── CMakeLists.txt
 │   └── CMakePresets.json
-├── frontend/           # React + TypeScript web app (Vite)
-├── docs/               # Design docs, architecture notes, decisions
-└── docker-compose.yml  # local PostgreSQL
+├── frontend/                # React + TypeScript web app (Vite) + Dockerfile + nginx.conf
+├── docs/                    # Design docs, architecture notes, decisions
+├── docker-compose.yml       # local PostgreSQL (dev)
+└── docker-compose.prod.yml  # full app (frontend + backend + Postgres) from GHCR images
 ```
 
 ## Running locally (Phase 1 walking skeleton)
@@ -57,6 +58,19 @@ npm install && npm run dev   # http://localhost:5173, proxies /api -> backend
 Health check: `GET http://localhost:8080/api/v1/health` →
 `{"status":"ok","db":"connected"}`.
 
+## Running the whole app with Docker (any machine)
+
+No toolchain required — only Docker. Prebuilt images are published to GHCR by CI.
+
+```sh
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
+# open http://localhost:3000
+```
+
+If the images are private, either make the GHCR packages public or `docker login ghcr.io` with a
+`read:packages` token first. See [`docs/learning/how-to-run.md`](./docs/learning/how-to-run.md).
+
 ## Design docs
 
 The project is being designed before implementation. See [`docs/`](./docs):
@@ -70,7 +84,9 @@ The project is being designed before implementation. See [`docs/`](./docs):
 
 ## Status
 
-**Phase 1 (walking skeleton) in progress.** The toolchain is proven end-to-end: React (Vite) →
+**Phase 1 (walking skeleton) complete.** The toolchain is proven end-to-end: React (Vite) →
 dev proxy → C++ Crow backend → libpqxx → PostgreSQL, with `GET /api/v1/health` returning live
-DB status, GoogleTest and Vitest harnesses wired, and the first migration applied. See
+DB status, GoogleTest and Vitest harnesses wired, and the first migration applied. **CI** builds and
+tests both halves on every push, and the app is **containerized** (images published to GHCR, full
+stack via `docker-compose.prod.yml`). Next: Phase 2 (core domain). See
 [`docs/05-roadmap.md`](./docs/05-roadmap.md) and the [issues](https://github.com/itaim900/Fit-App/issues).

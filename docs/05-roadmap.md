@@ -51,8 +51,9 @@ work is just "filling in." No business logic.
 - [x] React + TypeScript + Vite scaffold
 - [x] A page that calls `/health` and renders the result (via the dev proxy)
 - [x] Vitest + Testing Library + MSW wired with one passing test
-- [ ] **GitHub Actions CI** builds and tests both backend and frontend *(do this first)*
-- [ ] **Containerize** backend + frontend + DB into a single `docker compose up` *(after CI)*
+- [x] **GitHub Actions CI** builds and tests both backend and frontend
+- [x] **Containerize** backend + frontend + DB — images published to GHCR; full stack via
+  `docker-compose.prod.yml`
 
 **DoD:** a developer can clone the repo, run one or two documented commands (or just
 `docker compose up`), and see the React page display live data from the C++ backend backed by

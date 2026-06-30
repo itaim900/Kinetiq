@@ -37,12 +37,13 @@ COPY --from=build /src/build/fitapp_server /usr/local/bin/fitapp_server
 
 # Defaults assume the compose network (Postgres reachable as host "postgres").
 # BIND_ADDR=0.0.0.0 so the frontend container can reach the server.
+# NOTE: no DB_PASSWORD here on purpose — secrets must not be baked into images;
+# it is supplied at runtime by docker-compose.prod.yml.
 ENV BIND_ADDR=0.0.0.0 \
     DB_HOST=postgres \
     DB_PORT=5432 \
     DB_NAME=fitapp \
-    DB_USER=fitapp \
-    DB_PASSWORD=fitapp
+    DB_USER=fitapp
 
 EXPOSE 8080
 CMD ["/usr/local/bin/fitapp_server"]
