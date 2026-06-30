@@ -1,0 +1,9 @@
+# Keep the backend image build context small and free of host-built artifacts.
+.git
+**/build/
+**/node_modules/
+**/dist/
+docs/
+frontend/
+*.md
+.github/

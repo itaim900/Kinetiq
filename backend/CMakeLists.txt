@@ -47,11 +47,16 @@ if(WIN32)
 endif()
 
 # --- tests ---
-enable_testing()
-find_package(GTest REQUIRED)
-add_executable(fitapp_tests tests/test_main.cpp)
-target_include_directories(fitapp_tests PRIVATE src)
-target_link_libraries(fitapp_tests PRIVATE GTest::gtest GTest::gtest_main)
+# Skipped in the Docker image build (no GoogleTest needed there); ON for local
+# dev and CI so `ctest` runs the suite.
+option(FITAPP_BUILD_TESTS "Build the unit test suite" ON)
+if(FITAPP_BUILD_TESTS)
+    enable_testing()
+    find_package(GTest REQUIRED)
+    add_executable(fitapp_tests tests/test_main.cpp)
+    target_include_directories(fitapp_tests PRIVATE src)
+    target_link_libraries(fitapp_tests PRIVATE GTest::gtest GTest::gtest_main)
 
-include(GoogleTest)
-gtest_discover_tests(fitapp_tests)
+    include(GoogleTest)
+    gtest_discover_tests(fitapp_tests)
+endif()

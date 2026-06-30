@@ -40,7 +40,10 @@ int main() {
         return res;
     });
 
-    CROW_LOG_INFO << "Fit App backend listening on http://127.0.0.1:8080";
-    app.bindaddr("127.0.0.1").port(8080).multithreaded().run();
+    // Bind to 127.0.0.1 by default (safe for local dev). In containers set
+    // BIND_ADDR=0.0.0.0 so other containers (e.g. the frontend) can reach it.
+    const std::string bindAddr = fitapp::envOr("BIND_ADDR", "127.0.0.1");
+    CROW_LOG_INFO << "Fit App backend listening on http://" << bindAddr << ":8080";
+    app.bindaddr(bindAddr).port(8080).multithreaded().run();
     return 0;
 }
