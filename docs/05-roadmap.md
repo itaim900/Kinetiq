@@ -43,18 +43,20 @@ Phase 1 without open architectural questions.
 work is just "filling in." No business logic.
 
 **Deliverables:**
-- Backend builds with CMake + vcpkg + Drogon ("hello") 
-- `docker-compose.yml` runs Postgres
-- First migration applied; backend connects to the DB
-- `GET /api/v1/health` returns app + DB status
-- GoogleTest wired with one passing test
-- React + TypeScript + Vite scaffold
-- A page that calls `/health` and renders the result (via the dev proxy)
-- Vitest + Testing Library + MSW wired with one passing test
-- GitHub Actions CI builds and tests both backend and frontend
+- [x] Backend builds with CMake + Ninja + MSYS2 GCC + Crow ("hello") — see ADR-0011/0012
+- [x] `docker-compose.yml` runs Postgres
+- [x] First migration applied; backend connects to the DB
+- [x] `GET /api/v1/health` returns app + DB status
+- [x] GoogleTest wired with one passing test
+- [x] React + TypeScript + Vite scaffold
+- [x] A page that calls `/health` and renders the result (via the dev proxy)
+- [x] Vitest + Testing Library + MSW wired with one passing test
+- [ ] **GitHub Actions CI** builds and tests both backend and frontend *(do this first)*
+- [ ] **Containerize** backend + frontend + DB into a single `docker compose up` *(after CI)*
 
-**DoD:** a developer can clone the repo, run one or two documented commands, and see the React page
-display live data from the C++ backend backed by Postgres; CI is green.
+**DoD:** a developer can clone the repo, run one or two documented commands (or just
+`docker compose up`), and see the React page display live data from the C++ backend backed by
+Postgres; CI is green.
 
 ---
 

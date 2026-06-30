@@ -18,8 +18,13 @@ target_include_directories(fitapp_server PRIVATE
     ${CMAKE_SOURCE_DIR}/third_party/crow)
 target_link_libraries(fitapp_server PRIVATE
     ${PQXX_LIB} ${PQ_LIB}
-    Threads::Threads
-    ws2_32 wsock32 mswsock)  # Windows sockets for Crow/asio
+    Threads::Threads)
+
+# Crow/asio needs the Win32 socket libraries on Windows only. On Linux/macOS
+# the sockets API lives in libc, so these must not be linked there.
+if(WIN32)
+    target_link_libraries(fitapp_server PRIVATE ws2_32 wsock32 mswsock)
+endif()
 
 # --- tests ---
 enable_testing()

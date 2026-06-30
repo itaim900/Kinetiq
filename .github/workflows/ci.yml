@@ -1,0 +1,64 @@
+# Continuous Integration: on every push / PR, build and test both halves of the
+# app on a clean Ubuntu machine. This is the "does it work on a machine that
+# isn't my laptop?" safety net. The backend build steps here mirror exactly what
+# the backend Dockerfile will do later (same Linux + apt packages).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend (C++ build + tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Prebuilt packages — no slow source builds (the whole reason we left vcpkg).
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build g++ \
+            libasio-dev \
+            libpqxx-dev libpq-dev \
+            libgtest-dev
+
+      - name: Configure
+        working-directory: backend
+        run: cmake --preset default
+
+      - name: Build
+        working-directory: backend
+        run: cmake --build build
+
+      - name: Test
+        working-directory: backend
+        run: ctest --test-dir build --output-on-failure
+
+  frontend:
+    name: Frontend (React build + tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Test
+        working-directory: frontend
+        run: npm test
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
