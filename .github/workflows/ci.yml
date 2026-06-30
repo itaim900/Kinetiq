@@ -17,19 +17,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Prebuilt packages — no slow source builds (the whole reason we left vcpkg).
+      # Crow (asio) + libpq + gtest from apt. We deliberately do NOT install
+      # libpqxx-dev: Ubuntu's package has a header/lib std::source_location
+      # mismatch, so we build libpqxx from source (FITAPP_FETCH_LIBPQXX=ON).
       - name: Install build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            cmake ninja-build g++ \
+            cmake ninja-build g++ git \
             libasio-dev \
-            libpqxx-dev libpq-dev \
+            libpq-dev \
             libgtest-dev
 
       - name: Configure
         working-directory: backend
-        run: cmake --preset default
+        run: cmake --preset default -DFITAPP_FETCH_LIBPQXX=ON
 
       - name: Build
         working-directory: backend

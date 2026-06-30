@@ -6,10 +6,30 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Threads REQUIRED)
 
-# libpqxx (+ libpq) come prebuilt from MSYS2; headers are on the default
-# compiler include path, so we only need to locate the import libraries.
-find_library(PQXX_LIB NAMES pqxx libpqxx REQUIRED)
-find_library(PQ_LIB   NAMES pq   libpq   REQUIRED)
+# How we obtain libpqxx:
+#  * Local dev (MSYS2): use the prebuilt pacman package — fast (default, OFF).
+#  * CI / Docker (Linux): build libpqxx from source, because Ubuntu's prebuilt
+#    libpqxx-dev 7.8.1 has a header/library mismatch around std::source_location
+#    that makes linking fail. Building from source keeps headers + lib consistent.
+option(FITAPP_FETCH_LIBPQXX "Build libpqxx from source instead of using a prebuilt package" OFF)
+
+if(FITAPP_FETCH_LIBPQXX)
+    include(FetchContent)
+    set(SKIP_BUILD_TEST ON CACHE BOOL "" FORCE)  # don't build libpqxx's own test suite
+    FetchContent_Declare(libpqxx
+        GIT_REPOSITORY https://github.com/jtv/libpqxx.git
+        GIT_TAG 7.9.2
+        GIT_SHALLOW TRUE)
+    FetchContent_MakeAvailable(libpqxx)
+    add_library(fitapp_pqxx INTERFACE)
+    target_link_libraries(fitapp_pqxx INTERFACE pqxx)
+else()
+    # Prebuilt libpqxx (+ libpq); headers are on the default include path.
+    find_library(PQXX_LIB NAMES pqxx libpqxx REQUIRED)
+    find_library(PQ_LIB   NAMES pq   libpq   REQUIRED)
+    add_library(fitapp_pqxx INTERFACE)
+    target_link_libraries(fitapp_pqxx INTERFACE ${PQXX_LIB} ${PQ_LIB})
+endif()
 
 # --- application server ---
 add_executable(fitapp_server src/main.cpp)
@@ -17,7 +37,7 @@ target_include_directories(fitapp_server PRIVATE
     src
     ${CMAKE_SOURCE_DIR}/third_party/crow)
 target_link_libraries(fitapp_server PRIVATE
-    ${PQXX_LIB} ${PQ_LIB}
+    fitapp_pqxx
     Threads::Threads)
 
 # Crow/asio needs the Win32 socket libraries on Windows only. On Linux/macOS
