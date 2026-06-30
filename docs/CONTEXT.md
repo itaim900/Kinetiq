@@ -7,12 +7,12 @@ AI-powered personalized workout-plan web app. Purpose: **learning + portfolio**.
 **beginner** at C++ and React — prefer clear explanations, small steps, and planning over fast code.
 
 ## Stack (as built)
-- **Backend:** C++20, **Crow** (header-only HTTP, vendored at `backend/third_party/crow/crow_all.h`),
-  **libpqxx** (Postgres), JSON via nlohmann-json. Build: **CMake + Ninja** on **MSYS2 UCRT64 GCC**
-  (preset `default`). Tests: **GoogleTest**.
-- **Frontend:** React 18 + **TypeScript** + **Vite**. Tests: **Vitest + Testing Library + MSW**.
-  Dev server proxies `/api` → backend.
-- **Database:** PostgreSQL 16 via **Docker Compose**. Migrations in `backend/migrations/` (SQL,
+- **Server (C++):** C++20, **Crow** (header-only HTTP, vendored at
+  `Server/third_party/crow/crow_all.h`), **libpqxx** (Postgres), JSON via nlohmann-json.
+  Build: **CMake + Ninja** on **MSYS2 UCRT64 GCC** (preset `default`). Tests: **GoogleTest**.
+- **Client (React):** React 18 + **TypeScript** + **Vite**. Tests: **Vitest + Testing Library + MSW**.
+  Dev server proxies `/api` → server.
+- **Database:** PostgreSQL 16 via **Docker Compose**. Migrations in `Server/migrations/` (SQL,
   numbered; auto-applied on first container init).
 
 ## Architecture (intended)
@@ -38,7 +38,7 @@ the 8 GB host). **Pending:** make GHCR packages public (user chose this) and ver
 - Docker Postgres runs on the **default port 5432**. A native **PostgreSQL 16 Windows service**
   (`postgresql-x64-16` + `pemAgent`) used to occupy 5432; both were set to **Manual** start to free
   the port (reversible — see `docs/learning/how-to-run.md`).
-- Backend commands need `C:\msys64\ucrt64\bin` on PATH. `vcpkg` exists at `C:\Users\<user>\vcpkg`
+- Backend commands need `C:\msys64\ucrt64\bin` on PATH (run from `Server/`). `vcpkg` exists at `C:\Users\<user>\vcpkg`
   but is **unused** (abandoned — see below).
 - **GitHub CLI (`gh`)** installed at `C:\Program Files\GitHub CLI\gh.exe` (v2.95.0), logged in as
   `itaim900`. On system PATH; restart terminal/Cursor if `gh` not found. Token scopes: `repo`,
@@ -65,15 +65,17 @@ the 8 GB host). **Pending:** make GHCR packages public (user chose this) and ver
 | File | Purpose |
 |---|---|
 | `docker-compose.yml` | Dev: Postgres only (host port 5432) |
-| `docker-compose.prod.yml` | Prod-like: postgres + backend + frontend (app on **localhost:3000**) |
-| `backend/Dockerfile` | Multi-stage: Ubuntu build (FetchContent libpqxx) → slim runtime |
-| `frontend/Dockerfile` + `nginx.conf` | Multi-stage: Node build → nginx serves static + proxies `/api` → `backend:8080` |
+| `docker-compose.prod.yml` | Prod-like: postgres + backend + client containers (app on **localhost:3000**) |
+| `Server/Dockerfile` | Multi-stage: Ubuntu build (FetchContent libpqxx) → slim runtime |
+| `Client/Dockerfile` + `nginx.conf` | Multi-stage: Node build → nginx serves static + proxies `/api` → `backend:8080` |
 | `.github/workflows/ci.yml` | Build + test backend (with `FITAPP_FETCH_LIBPQXX=ON`) and frontend |
 | `.github/workflows/images.yml` | Build + push to GHCR on push to `main` |
 
-**GHCR image names:** `ghcr.io/itaim900/fit-app-backend:latest` and
-`ghcr.io/itaim900/fit-app-frontend:latest` (also tagged by commit SHA). Repo is **private**; packages
-currently **private** — user intends to make them **public** for portfolio pull-without-login.
+**Folder layout:** repo uses `Server/` (C++ API) and `Client/` (React SPA). Docker compose service
+names and GHCR image names still use `backend` / `frontend` for compatibility:
+`ghcr.io/itaim900/fit-app-backend:latest` and `ghcr.io/itaim900/fit-app-frontend:latest` (also tagged
+by commit SHA). Repo is **private**; packages currently **private** — user intends to make them
+**public** for portfolio pull-without-login.
 
 ## Troubleshooting (learned this session)
 | Symptom | Likely cause |
@@ -100,9 +102,9 @@ Actions: https://github.com/itaim900/Fit-App/actions
 
 ## How to run
 See `docs/learning/how-to-run.md`. Two ways:
-- **Dev (fast iteration):** `docker compose up -d` (Postgres) → build & run backend
-  (`cmake --preset default && cmake --build --preset default`, then `./build/fitapp_server.exe`) →
-  `npm run dev` in `frontend/` → open **localhost:5173**.
+- **Dev (fast iteration):** `docker compose up -d` (Postgres) → build & run server
+  (`cmake --preset default && cmake --build --preset default`, then `./build/fitapp_server.exe`
+  from `Server/`) → `npm run dev` in `Client/` → open **localhost:5173**.
 - **Whole app via containers:** `docker compose -f docker-compose.prod.yml pull && up -d` → open
   **localhost:3000**. Requires GHCR packages public, or `docker login ghcr.io` with `read:packages`.
 

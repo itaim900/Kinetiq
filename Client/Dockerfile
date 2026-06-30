@@ -4,7 +4,7 @@
 #                      backend container. This is a PRODUCTION build (no dev
 #                      server / hot-reload); for day-to-day coding use `npm run dev`.
 #
-# Context for this Dockerfile is the frontend/ folder.
+# Context for this Dockerfile is the Client/ folder.
 
 # ---------- build stage ----------
 FROM node:20-alpine AS build

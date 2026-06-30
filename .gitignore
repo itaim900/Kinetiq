@@ -1,4 +1,4 @@
-# ---- C++ / backend ----
+# ---- C++ / Server ----
 build/
 out/
 *.o
@@ -15,7 +15,7 @@ cmake_install.cmake
 compile_commands.json
 vcpkg_installed/
 
-# ---- Node / React / frontend ----
+# ---- Node / React / Client ----
 node_modules/
 dist/
 .vite/
