@@ -28,8 +28,8 @@ test harnesses green. First migration applied. No features yet.
 
 ## Machine constraints (important)
 - **8 GB RAM.** Do NOT run a heavy C++ build and Docker simultaneously (caused OOM crashes).
-- A **local Postgres already occupies port 5432**, so the Docker container uses host port **5433**
-  (`POSTGRES_HOST_PORT=5433`; run backend with `DB_PORT=5433`).
+- Docker Postgres runs on the **default port 5432**. (A native PostgreSQL 16 Windows service that
+  used to occupy 5432 was set to **Manual** start to free the port; reversible.)
 - Backend commands need `C:\msys64\ucrt64\bin` on PATH. `vcpkg` exists at `C:\Users\<user>\vcpkg`
   but is **unused** (abandoned — see below).
 
@@ -54,9 +54,9 @@ test harnesses green. First migration applied. No features yet.
 Repo `itaim900/Fit-App`. Backlog = **4 milestones** (Phase 0–3) + **38 issues** + labels.
 
 ## How to run
-See `docs/learning/how-to-run.md`. Short: `docker compose up -d` (POSTGRES_HOST_PORT=5433) →
-build & run backend (`cmake --preset default && cmake --build --preset default`, then
-`DB_PORT=5433 ./build/fitapp_server.exe`) → `npm run dev` in `frontend/` → open localhost:5173.
+See `docs/learning/how-to-run.md`. Short: `docker compose up -d` → build & run backend
+(`cmake --preset default && cmake --build --preset default`, then `./build/fitapp_server.exe`) →
+`npm run dev` in `frontend/` → open localhost:5173.
 
 ## Next steps
 Phase 1 leftover: **GitHub Actions CI**. Then **Phase 2** (auth, profile, exercise catalog, manual
