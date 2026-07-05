@@ -22,20 +22,17 @@ MET calc, starting-weight engine) + LLM (Gemini behind `ILLMClient` port) for cr
 only, with schema validation + self-correction. Auth: short-lived JWT (v1).
 
 ## Status
-**Phase 1 "walking skeleton" COMPLETE.** End-to-end verified (dev mode): React → Vite proxy → Crow
-backend → libpqxx → Postgres. `GET /api/v1/health` → `{"status":"ok","db":"connected"}`. Backend +
-frontend test harnesses green. First migration (`0001_init`) applied. No business logic yet.
+**Phase 1 "walking skeleton" COMPLETE & fully verified (2026-07-05).** End-to-end: React → Vite proxy
+→ Crow backend → libpqxx → Postgres. `GET /api/v1/health` → `{"status":"ok","db":"connected"}`.
+Merged to `main` (PR #39); all 9 Phase 1 issues closed. See `docs/phase-1-summary.md`.
 
 **CI green** — `.github/workflows/ci.yml` builds + tests both halves on Ubuntu on every push/PR.
-**Containerized** — multi-stage Dockerfiles; images published to **GHCR** by
-`.github/workflows/images.yml`; full stack via `docker-compose.prod.yml`. Images build in CI (not on
-the 8 GB host).
+**Containerized & verified** — multi-stage Dockerfiles; images published to **GHCR** (now **public**)
+by `.github/workflows/images.yml`; full stack via `docker-compose.prod.yml`. Verified by an
+**anonymous** `pull` + `up` → app served at `localhost:3000`, DB connected. Images build in CI
+(not on the 8 GB host).
 
-**⚠️ Branch state:** container work + `Server/`/`Client/` rename live on branch **`2026-06-30-50br`**,
-**NOT yet merged to `main`**. `images.yml` only triggers on `main`, so the GHCR images are still from
-the pre-rename `main` (service/image names unchanged, so `pull` still works — images are just a bit
-behind). **Pending:** (1) merge branch → main (re-runs image build), (2) make GHCR packages public
-(user chose this), (3) verify `docker compose -f docker-compose.prod.yml pull && up -d` end-to-end.
+**Now starting Phase 2 (Core Domain).** See "Phase 2 plan" below and `docs/phase-2-plan.md`.
 
 ## Machine constraints (important)
 - **8 GB RAM.** Do NOT run a heavy C++ build and Docker simultaneously (caused OOM crashes). Building
@@ -79,8 +76,32 @@ behind). **Pending:** (1) merge branch → main (re-runs image build), (2) make 
 **Folder layout:** repo uses `Server/` (C++ API) and `Client/` (React SPA). Docker compose service
 names and GHCR image names still use `backend` / `frontend` for compatibility:
 `ghcr.io/itaim900/fit-app-backend:latest` and `ghcr.io/itaim900/fit-app-frontend:latest` (also tagged
-by commit SHA). Repo is **private**; packages currently **private** — user intends to make them
-**public** for portfolio pull-without-login.
+by commit SHA). Repo is **private**; **packages are PUBLIC** (pull needs no login).
+
+## Phase 2 plan (Core Domain) — in progress
+Goal: non-AI features, **test-first**: register/login, profile + injuries, exercise catalog, manual
+workouts. Full detail in `docs/phase-2-plan.md`. Built as vertical slices (DB → port → logic →
+endpoint → UI), **auth first** (every other endpoint is 🔒).
+
+**Locked decisions:**
+1. **Migrations:** C++ **startup migration runner** — applies `migrations/NNNN_*.sql` not yet in
+   `schema_migrations`, in order (dev + container consistent).
+2. **Integration-test DB:** dedicated **test database** + **per-test transaction rollback** (fast, isolated).
+3. **Libraries:** **argon2** (password hashing; `libargon2`/`libargon2-dev`, prebuilt both platforms)
+   + **jwt-cpp** (JWT; header-only via CMake FetchContent, ABI-safe).
+4. **Schema:** write the **full v1 schema up front** (issue #15) from `01-data-model.md`.
+
+**Slices (with issues):**
+- **Slice 0 — Foundations:** hexagonal folders (`http/ app/ domain/ ports/ adapters/db/ config/`),
+  wire argon2 + jwt-cpp (verify MSYS2 *and* CI), startup migration runner, test-DB harness, full v1
+  schema migration.
+- **Slice 1 — Auth:** #16 repo ports + fakes, #17 argon2+JWT+middleware, #18 register/login/me, #24 FE auth.
+- **Slice 2 — Profile & Injuries:** #19 `/users/me`, #20 injuries CRUD, #25 FE forms (RHF+Zod).
+- **Slice 3 — Exercises + seed:** #21 catalog endpoints, #22 seed script, #26 FE browser.
+- **Slice 4 — Manual workouts:** #23 workouts CRUD, #27 FE builder.
+
+**TDD rhythm:** write failing test from the test cases in `02-api-contract.md` → implement against
+port/fake → green → refactor.
 
 ## Troubleshooting (learned this session)
 | Symptom | Likely cause |
@@ -97,6 +118,8 @@ by commit SHA). Repo is **private**; packages currently **private** — user int
 - `03-llm-port.md` — AI subsystem, `ILLMClient`, validation, weight engine
 - `04-architecture.md` — system architecture, folder layout
 - `05-roadmap.md` — phased plan + definitions of done (Phase 1 complete)
+- `phase-1-summary.md` — Phase 1 recap (file inventory, decisions, verification)
+- `phase-2-plan.md` — Phase 2 plan (slices, locked decisions, TDD workflow)
 - `adr/` — decision records (note: 0003 & 0005 superseded by 0011 & 0012)
 - `learning/` — git-ignored personal notes: `code-walkthrough.md`, `how-to-run.md`,
   `session-log-phase1-spike.md`
@@ -116,7 +139,10 @@ See `docs/learning/how-to-run.md`. Two ways:
 **Ports:** 5173 (Vite dev), 8080 (backend), 5432 (Postgres dev), 3000 (containerized app UI).
 
 ## Next steps
-1. Merge branch `2026-06-30-50br` → `main` (re-runs CI + image publish with new paths).
-2. Make GHCR packages public → verify full container stack locally (`localhost:3000`).
-3. **Phase 2** (auth, profile, exercise catalog, manual workouts) built test-first per
-   `02-api-contract.md`.
+**Phase 2, Slice 0 — Foundations** (see `docs/phase-2-plan.md`):
+1. Create hexagonal backend folders (`http/ app/ domain/ ports/ adapters/db/ config/`).
+2. Wire **argon2** + **jwt-cpp** into CMake; verify build on MSYS2 **and** CI/Docker.
+3. Build the **startup migration runner** (+ convert existing `0001_init` if needed).
+4. Set up the **integration-test DB harness** (dedicated DB + transaction rollback).
+5. Write the **full v1 schema migration** from `01-data-model.md`.
+Then Slice 1 (Auth). Consider capturing the 4 locked decisions as ADRs (0013–00xx).
