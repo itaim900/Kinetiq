@@ -37,9 +37,11 @@ by `.github/workflows/images.yml`; full stack via `docker-compose.prod.yml`. Ver
 **Phase 2 (Core Domain) IN PROGRESS. Slice 0 "Foundations" COMPLETE & verified (2026-07-05, PR #40
 merged to `main`).** Hexagonal folders, argon2 + jwt-cpp wired (smoke tests green on MSYS2 + CI),
 startup migration runner, full v1 schema (`0002_core_schema.sql`), integration-test DB harness
-(separate `fitapp_test` DB + per-test transaction rollback). `ctest` = **9/9** locally and in CI
-(integration tests run against a Postgres service in the CI backend job). **Slice 1 (Auth) is next.**
-See "Phase 2 plan" below and `docs/phase-2-plan.md`.
+(separate `fitapp_test` DB + per-test transaction rollback). **In-process HTTP test harness**
+(`tests/support/HttpClient.h`) added; testing architecture documented in `phase-2-plan.md` §8.
+`ctest` = **13/13** locally and in CI (integration tests run against a Postgres service in the CI
+Server job). Dev stack re-verified end-to-end (Postgres → Server → Client proxy → health OK).
+**Slice 1 (Auth) is next.** See "Phase 2 plan" below and `docs/phase-2-plan.md`.
 
 ## Machine constraints (important)
 - **8 GB RAM.** Do NOT run a heavy C++ build and Docker simultaneously (caused OOM crashes). Building
@@ -83,10 +85,15 @@ See "Phase 2 plan" below and `docs/phase-2-plan.md`.
 Migrations are **shipped inside the backend image** (`/app/migrations`, `MIGRATIONS_DIR`) and applied
 by the server on startup; the Postgres `docker-entrypoint-initdb.d` mount was removed from compose.
 
-**Folder layout:** repo uses `Server/` (C++ API) and `Client/` (React SPA). Docker compose service
-names and GHCR image names still use `backend` / `frontend` for compatibility:
-`ghcr.io/itaim900/fit-app-backend:latest` and `ghcr.io/itaim900/fit-app-frontend:latest` (also tagged
-by commit SHA). Repo is **private**; **packages are PUBLIC** (pull needs no login).
+**Folder layout (important):** all source code lives in **`Server/`** (C++ API) and **`Client/`**
+(React SPA). There are **no** `backend/` or `frontend/` folders — those were renamed in PR #39.
+The words "backend" / "frontend" still appear elsewhere as **role names**, not folder paths:
+- Docker Compose **service names** (`backend`, `frontend`) — how containers talk on the network
+  (e.g. nginx proxies to `http://backend:8080`).
+- **GHCR image names** (`fit-app-backend`, `fit-app-frontend`) — already published; kept for compatibility.
+- **CI job labels** and prose in docs ("build the backend").
+Do **not** recreate `backend/` or `frontend/` directories; put new code in `Server/` or `Client/`.
+Repo is **private**; **packages are PUBLIC** (pull needs no login).
 
 ## Phase 2 plan (Core Domain) — in progress
 Goal: non-AI features, **test-first**: register/login, profile + injuries, exercise catalog, manual
@@ -106,7 +113,8 @@ endpoint → UI), **auth first** (every other endpoint is 🔒).
   adapters/db/ config/`, each with a role README), argon2 + jwt-cpp wired + smoke-tested (MSYS2 + CI),
   `Migrator` startup runner (owns `schema_migrations`, fails closed), `DbTest` harness, full v1 schema
   (`0002_core_schema.sql`).
-- **Slice 1 — Auth (NEXT):** #16 repo ports + fakes, #17 argon2+JWT+middleware, #18 register/login/me, #24 FE auth.
+- **Slice 1 — Auth (NEXT):** #16 repo ports + fakes, #17 argon2+JWT+**authenticator fn** (not Crow
+  middleware — see Testing architecture), #18 register/login/me, #24 Client auth.
 - **Slice 2 — Profile & Injuries:** #19 `/users/me`, #20 injuries CRUD, #25 FE forms (RHF+Zod).
 - **Slice 3 — Exercises + seed:** #21 catalog endpoints, #22 seed script, #26 FE browser.
 - **Slice 4 — Manual workouts:** #23 workouts CRUD, #27 FE builder.
@@ -114,11 +122,21 @@ endpoint → UI), **auth first** (every other endpoint is 🔒).
 **TDD rhythm:** write failing test from the test cases in `02-api-contract.md` → implement against
 port/fake → green → refactor.
 
+**Testing architecture** (see `phase-2-plan.md` §8):
+- **Pyramid:** domain unit → service unit (in-memory fakes) → adapter integration (`DbTest`) → HTTP
+  in-process (`HttpClient`) → Client (Vitest + MSW).
+- **Fakes:** hand-written in-memory repo implementations under `tests/support/` (no gmock).
+- **HTTP tests:** `HttpClient` drives Crow via `app.handle_full()` — real routing/handlers, no socket.
+- **Crow middleware caveat:** `handle_full()` does **not** run middleware (only the socket path does).
+  Auth for Slice 1 = an **authenticator function** handlers call, not Crow middleware — keeps protected
+  routes testable in-process. Will become an ADR.
+
 ## Troubleshooting (learned this session)
 | Symptom | Likely cause |
 |---|---|
-| **Database: unavailable** | Postgres container not running, Docker engine frozen, or backend
+| **Database: unavailable** | Postgres container not running, Docker engine frozen, or Server
   `DB_PORT` mismatch (was 5432 vs 5433 when native Postgres held 5432 — now fixed on default 5432). |
+| Server exits: `migrations failed, refusing to start` | Postgres not up yet — start `docker compose up -d`, wait for `healthy`, rerun Server. |
 | `docker` commands hang | Docker Desktop open but engine not ready — restart Docker Desktop / WSL. |
 | CI backend link error on Linux | Fixed by `FITAPP_FETCH_LIBPQXX=ON` (don't use Ubuntu `libpqxx-dev`). |
 | Local Docker build OOM | Expected on 8 GB — use CI-built images instead. |
@@ -151,12 +169,11 @@ See `docs/learning/how-to-run.md`. Two ways:
 
 ## Next steps
 **Phase 2, Slice 1 — Auth** (see `docs/phase-2-plan.md`), TDD per `02-api-contract.md`:
-1. **#16** `IUserRepository` port + in-memory fake (unit-testable) + `PgUserRepository` (integration).
-2. **#17** argon2 password hashing service + JWT issue/verify service + Crow auth **middleware**
-   (`Authorization: Bearer` → `CurrentUser`); promote auth deps from the test target onto
-   `fitapp_server` and add `libargon2`/`libssl` runtime libs to `Server/Dockerfile`.
-3. **#18** `POST /auth/register`, `POST /auth/login`, `GET /users/me` (controllers + DTOs).
+1. **#16** `IUserRepository` port + `InMemoryUserRepository` fake + `PgUserRepository` (integration).
+2. **#17** argon2 hasher + JWT issue/verify + **authenticator** (`Authorization: Bearer` → `CurrentUser`
+   or 401); promote auth deps from test target onto `fitapp_server` + `Server/Dockerfile` runtime libs.
+3. **#18** `POST /auth/register`, `POST /auth/login`, `GET /users/me` (handlers + DTOs; test via `HttpClient`).
 4. **#24** Client auth (login/register forms, token storage, authed fetch).
 
-Notes: the auth libs currently link into `fitapp_tests` only (Slice 0) — Slice 1 moves them to the
-server + image. Consider capturing the 4 Phase 2 locked decisions as ADRs (0013–00xx).
+Notes: auth libs currently link into `fitapp_tests` only (Slice 0) — Slice 1 moves them to the Server
+binary + image. Capture Phase 2 locked decisions + auth-as-authenticator as ADRs (0013–00xx).
