@@ -46,6 +46,22 @@ if(WIN32)
     target_link_libraries(fitapp_server PRIVATE ws2_32 wsock32 mswsock)
 endif()
 
+# --- auth dependencies (Phase 2) ---
+# argon2 (password hashing) + jwt-cpp (JWT). Both must build on MSYS2 AND Linux
+# (CI/Docker). argon2 is a prebuilt system lib on both; jwt-cpp is header-only
+# via FetchContent (ABI-safe), and needs OpenSSL's libcrypto for signing.
+#
+# For Slice 0 these are wired into the TEST target only, to verify the toolchain
+# on both platforms via a smoke test. Slice 1 promotes them to fitapp_server
+# (and adds the runtime libs to Server/Dockerfile) once auth actually uses them.
+function(fitapp_add_auth_deps target)
+    find_package(OpenSSL REQUIRED)
+    find_library(ARGON2_LIB NAMES argon2 libargon2 REQUIRED)
+    find_path(ARGON2_INCLUDE_DIR argon2.h REQUIRED)
+    target_include_directories(${target} PRIVATE ${ARGON2_INCLUDE_DIR})
+    target_link_libraries(${target} PRIVATE ${ARGON2_LIB} OpenSSL::Crypto jwt-cpp::jwt-cpp)
+endfunction()
+
 # --- tests ---
 # Skipped in the Docker image build (no GoogleTest needed there); ON for local
 # dev and CI so `ctest` runs the suite.
@@ -53,9 +69,21 @@ option(FITAPP_BUILD_TESTS "Build the unit test suite" ON)
 if(FITAPP_BUILD_TESTS)
     enable_testing()
     find_package(GTest REQUIRED)
-    add_executable(fitapp_tests tests/test_main.cpp)
+
+    # jwt-cpp: header-only JWT library, pinned. Uses OpenSSL under the hood.
+    include(FetchContent)
+    set(JWT_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(JWT_DISABLE_PICOJSON OFF CACHE BOOL "" FORCE)
+    FetchContent_Declare(jwt-cpp
+        GIT_REPOSITORY https://github.com/Thalhammer/jwt-cpp.git
+        GIT_TAG v0.7.0
+        GIT_SHALLOW TRUE)
+    FetchContent_MakeAvailable(jwt-cpp)
+
+    add_executable(fitapp_tests tests/test_main.cpp tests/test_auth_deps.cpp)
     target_include_directories(fitapp_tests PRIVATE src)
     target_link_libraries(fitapp_tests PRIVATE GTest::gtest GTest::gtest_main)
+    fitapp_add_auth_deps(fitapp_tests)
 
     include(GoogleTest)
     gtest_discover_tests(fitapp_tests)

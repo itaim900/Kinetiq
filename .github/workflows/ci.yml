@@ -20,6 +20,8 @@ jobs:
       # Crow (asio) + libpq + gtest from apt. We deliberately do NOT install
       # libpqxx-dev: Ubuntu's package has a header/lib std::source_location
       # mismatch, so we build libpqxx from source (FITAPP_FETCH_LIBPQXX=ON).
+      # Phase 2 auth deps: libargon2-dev (password hashing) + libssl-dev
+      # (OpenSSL, used by jwt-cpp which is fetched from source at configure time).
       - name: Install build dependencies
         run: |
           sudo apt-get update
@@ -27,7 +29,8 @@ jobs:
             cmake ninja-build g++ git \
             libasio-dev \
             libpq-dev \
-            libgtest-dev
+            libgtest-dev \
+            libargon2-dev libssl-dev
 
       - name: Configure
         working-directory: Server
