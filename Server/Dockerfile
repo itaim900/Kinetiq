@@ -35,15 +35,22 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
 
 COPY --from=build /src/build/fitapp_server /usr/local/bin/fitapp_server
 
+# Ship the SQL migrations; the server applies pending ones on startup (the app
+# owns the schema now, not Postgres's docker-entrypoint-initdb.d).
+WORKDIR /app
+COPY Server/migrations ./migrations
+
 # Defaults assume the compose network (Postgres reachable as host "postgres").
 # BIND_ADDR=0.0.0.0 so the frontend container can reach the server.
+# MIGRATIONS_DIR points at the SQL copied above.
 # NOTE: no DB_PASSWORD here on purpose — secrets must not be baked into images;
 # it is supplied at runtime by docker-compose.prod.yml.
 ENV BIND_ADDR=0.0.0.0 \
     DB_HOST=postgres \
     DB_PORT=5432 \
     DB_NAME=fitapp \
-    DB_USER=fitapp
+    DB_USER=fitapp \
+    MIGRATIONS_DIR=/app/migrations
 
 EXPOSE 8080
 CMD ["/usr/local/bin/fitapp_server"]

@@ -11,8 +11,8 @@ services:
       - "${POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
       - fitapp_pgdata:/var/lib/postgresql/data
-      # On first init (empty data dir), Postgres runs these .sql files in order.
-      - ./Server/migrations:/docker-entrypoint-initdb.d:ro
+      # No initdb.d mount: migrations are applied by the backend on startup
+      # (run `fitapp_server` locally, or use docker-compose.prod.yml).
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U fitapp -d fitapp"]
       interval: 5s
