@@ -144,7 +144,39 @@ workout_exercises, generation_requests, strength norms). Applied by the new runn
 
 ---
 
-## 8. Issue map (GitHub milestone #3)
+## 8. Testing architecture
+
+Decisions (2026-07-05): **in-process HTTP tests + controller unit tests**, and **hand-written
+in-memory fakes** (no gmock).
+
+**The pyramid** (bottom = many, fast; top = few):
+
+| Layer | What | Tooling | DB? |
+|---|---|---|---|
+| Domain unit | validators (email, password policy) | GoogleTest | no |
+| Service unit | use cases against **in-memory fakes** of the repo ports | GoogleTest | no |
+| Adapter integration | `Pg*Repository` vs real Postgres | `DbTest` (tx rollback) | yes |
+| HTTP (in-process) | routes/handlers/DTOs via `HttpClient` (`app.handle_full`) | GoogleTest + Crow | mixed |
+| Frontend | components + flows, API mocked | Vitest + Testing Library + MSW | no |
+
+**Harness pieces (built in Slice 0):**
+- `tests/support/HttpClient.h` — sends requests through a Crow app **in-process** (no socket) via
+  `app.handle_full()`. Templated on the app type. Smoke-tested in `tests/test_http_harness.cpp`.
+- `tests/support/TestDb.h/.cpp` — the `DbTest` fixture (separate `fitapp_test` DB + per-test rollback).
+
+**⚠️ Crow middleware is NOT run by `handle_full()`** — it's wired by the socket `Connection`, and a
+route with route-local middleware would even dereference an uninitialized context under `handle_full`.
+**Implication for auth (Slice 1):** implement authentication as an **authenticator function/service
+that protected handlers call** (returns `CurrentUser` or triggers 401), *not* as a Crow middleware.
+Then the whole protected-endpoint path (incl. 401s) is testable in-process, and the authenticator is
+independently unit-tested (valid / missing / malformed / expired token). This will be recorded as an ADR.
+
+**Fakes:** each repository port gets a hand-written in-memory implementation under `tests/support/`
+(e.g. `InMemoryUserRepository`) — readable, no macros, doubles as living documentation of the port.
+
+---
+
+## 9. Issue map (GitHub milestone #3)
 
 | Issue | Slice |
 |---|---|

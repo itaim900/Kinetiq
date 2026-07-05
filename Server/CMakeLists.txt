@@ -86,12 +86,21 @@ if(FITAPP_BUILD_TESTS)
         tests/test_main.cpp
         tests/test_auth_deps.cpp
         tests/test_migrations.cpp
+        tests/test_http_harness.cpp
         tests/support/TestDb.cpp
         src/adapters/db/Migrator.cpp)
-    target_include_directories(fitapp_tests PRIVATE src tests)
+    target_include_directories(fitapp_tests PRIVATE
+        src tests
+        ${CMAKE_SOURCE_DIR}/third_party/crow)  # Crow for the in-process HTTP harness
     target_link_libraries(fitapp_tests PRIVATE
         GTest::gtest GTest::gtest_main
-        fitapp_pqxx)
+        fitapp_pqxx
+        Threads::Threads)
+    # Crow/asio needs the Win32 socket libs on Windows (even when we never open a
+    # socket — handle_full links them in). No-op on Linux.
+    if(WIN32)
+        target_link_libraries(fitapp_tests PRIVATE ws2_32 wsock32 mswsock)
+    endif()
     # Absolute path so integration tests find the SQL regardless of ctest's CWD.
     target_compile_definitions(fitapp_tests PRIVATE
         FITAPP_MIGRATIONS_DIR="${CMAKE_SOURCE_DIR}/migrations")
