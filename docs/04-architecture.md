@@ -81,7 +81,7 @@ testable **without** Drogon, Postgres, or the network. Adapters are wired in at 
 ## 3. Backend folder layout
 
 ```
-backend/
+Server/
 ├── CMakeLists.txt
 ├── vcpkg.json                 # declared dependencies (ADR-0005)
 ├── src/
@@ -114,7 +114,7 @@ The single place that knows *all* concrete technologies is `main.cpp` (the **com
 See [ADR-0010](./adr/0010-frontend-stack.md). Feature-folder organisation keeps related code together.
 
 ```
-frontend/
+Client/
 ├── package.json
 ├── vite.config.ts
 ├── index.html

@@ -3,7 +3,7 @@
 #   Stage 2 (runtime): tiny image with just the binary and the few shared libs
 #                      it needs. This is what actually ships/runs.
 #
-# Context for this Dockerfile is the REPO ROOT (so it can see backend/).
+# Context for this Dockerfile is the REPO ROOT (so it can see Server/).
 
 # ---------- build stage ----------
 FROM ubuntu:24.04 AS build
@@ -14,11 +14,11 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src
-COPY backend/ ./backend/
+COPY Server/ ./Server/
 
 # FITAPP_FETCH_LIBPQXX=ON builds libpqxx from source (consistent ABI on Linux).
 # Tests are skipped in the image (no GoogleTest dependency, smaller/faster build).
-RUN cmake -S backend -B build -G Ninja \
+RUN cmake -S Server -B build -G Ninja \
         -DCMAKE_BUILD_TYPE=Release \
         -DFITAPP_FETCH_LIBPQXX=ON \
         -DFITAPP_BUILD_TESTS=OFF \

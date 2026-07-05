@@ -23,7 +23,7 @@ spike we hit hard constraints on the actual dev machine (8 GB RAM):
 ## Decision
 
 Use **Crow** as the HTTP layer. JSON via **nlohmann-json**; Postgres access via **libpqxx** behind
-repository ports. Crow is vendored as a single header at `backend/third_party/crow/crow_all.h`.
+repository ports. Crow is vendored as a single header at `Server/third_party/crow/crow_all.h`.
 
 ## Consequences
 

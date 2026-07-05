@@ -20,7 +20,7 @@ they ran out of memory and took ~1 hour. We still want CMake; we need a lighter 
 
 Build with the **MSYS2 UCRT64** toolchain (GCC, CMake, Ninja). Dependencies come prebuilt via
 `pacman`. Crow is vendored as a single header. Configure/build via the `default` CMake preset
-(`backend/CMakePresets.json`, Ninja generator).
+(`Server/CMakePresets.json`, Ninja generator).
 
 Required packages:
 

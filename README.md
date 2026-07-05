@@ -18,17 +18,17 @@ experience level, available equipment, and schedule.
 
 ```
 .
-├── backend/            # C++ API server (Crow)
+├── Server/             # C++ API server (Crow)
 │   ├── src/            # application code
 │   ├── tests/          # GoogleTest unit tests
 │   ├── migrations/     # ordered SQL migrations
 │   ├── third_party/    # vendored headers (Crow)
 │   ├── CMakeLists.txt
 │   └── CMakePresets.json
-├── frontend/                # React + TypeScript web app (Vite) + Dockerfile + nginx.conf
-├── docs/                    # Design docs, architecture notes, decisions
-├── docker-compose.yml       # local PostgreSQL (dev)
-└── docker-compose.prod.yml  # full app (frontend + backend + Postgres) from GHCR images
+├── Client/             # React + TypeScript web app (Vite) + Dockerfile + nginx.conf
+├── docs/               # Design docs, architecture notes, decisions
+├── docker-compose.yml  # local PostgreSQL (dev)
+└── docker-compose.prod.yml  # full app (Server + Client + Postgres) from GHCR images
 ```
 
 ## Running locally (Phase 1 walking skeleton)
@@ -45,14 +45,14 @@ pacman -S --needed mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake \
 # 2. Start PostgreSQL (set POSTGRES_HOST_PORT if 5432 is taken)
 docker compose up -d
 
-# 3. Build + test the backend (from an MSYS2 UCRT64 shell, in backend/)
+# 3. Build + test the server (from an MSYS2 UCRT64 shell, in Server/)
 cmake --preset default && cmake --build --preset default && ctest --test-dir build
 
-# 4. Run the backend (DB_PORT must match docker-compose host port)
+# 4. Run the server
 ./build/fitapp_server.exe
 
-# 5. Frontend (in frontend/)
-npm install && npm run dev   # http://localhost:5173, proxies /api -> backend
+# 5. Client (in Client/)
+npm install && npm run dev   # http://localhost:5173, proxies /api -> server
 ```
 
 Health check: `GET http://localhost:8080/api/v1/health` →
