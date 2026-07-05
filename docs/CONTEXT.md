@@ -13,7 +13,9 @@ AI-powered personalized workout-plan web app. Purpose: **learning + portfolio**.
 - **Client (React):** React 18 + **TypeScript** + **Vite**. Tests: **Vitest + Testing Library + MSW**.
   Dev server proxies `/api` → server.
 - **Database:** PostgreSQL 16 via **Docker Compose**. Migrations in `Server/migrations/` (SQL,
-  numbered; auto-applied on first container init).
+  numbered `NNNN_*.sql`; applied by the **C++ startup migration runner**, not initdb).
+- **Auth deps (Phase 2):** **argon2** (password hashing, system lib) + **jwt-cpp** (JWT, header-only
+  via CMake FetchContent) + **OpenSSL** (libcrypto, used by jwt-cpp). All prebuilt on both platforms.
 
 ## Architecture (intended)
 Hexagonal / ports & adapters (ADR-0002). HTTP layer is a thin adapter; core never imports Crow.
@@ -32,7 +34,12 @@ by `.github/workflows/images.yml`; full stack via `docker-compose.prod.yml`. Ver
 **anonymous** `pull` + `up` → app served at `localhost:3000`, DB connected. Images build in CI
 (not on the 8 GB host).
 
-**Now starting Phase 2 (Core Domain).** See "Phase 2 plan" below and `docs/phase-2-plan.md`.
+**Phase 2 (Core Domain) IN PROGRESS. Slice 0 "Foundations" COMPLETE & verified (2026-07-05, PR #40
+merged to `main`).** Hexagonal folders, argon2 + jwt-cpp wired (smoke tests green on MSYS2 + CI),
+startup migration runner, full v1 schema (`0002_core_schema.sql`), integration-test DB harness
+(separate `fitapp_test` DB + per-test transaction rollback). `ctest` = **9/9** locally and in CI
+(integration tests run against a Postgres service in the CI backend job). **Slice 1 (Auth) is next.**
+See "Phase 2 plan" below and `docs/phase-2-plan.md`.
 
 ## Machine constraints (important)
 - **8 GB RAM.** Do NOT run a heavy C++ build and Docker simultaneously (caused OOM crashes). Building
@@ -70,8 +77,11 @@ by `.github/workflows/images.yml`; full stack via `docker-compose.prod.yml`. Ver
 | `docker-compose.prod.yml` | Prod-like: postgres + backend + client containers (app on **localhost:3000**) |
 | `Server/Dockerfile` | Multi-stage: Ubuntu build (FetchContent libpqxx) → slim runtime |
 | `Client/Dockerfile` + `nginx.conf` | Multi-stage: Node build → nginx serves static + proxies `/api` → `backend:8080` |
-| `.github/workflows/ci.yml` | Build + test backend (with `FITAPP_FETCH_LIBPQXX=ON`) and frontend |
+| `.github/workflows/ci.yml` | Build + test backend (with `FITAPP_FETCH_LIBPQXX=ON`; **Postgres service** for integration tests) and frontend |
 | `.github/workflows/images.yml` | Build + push to GHCR on push to `main` |
+
+Migrations are **shipped inside the backend image** (`/app/migrations`, `MIGRATIONS_DIR`) and applied
+by the server on startup; the Postgres `docker-entrypoint-initdb.d` mount was removed from compose.
 
 **Folder layout:** repo uses `Server/` (C++ API) and `Client/` (React SPA). Docker compose service
 names and GHCR image names still use `backend` / `frontend` for compatibility:
@@ -92,10 +102,11 @@ endpoint → UI), **auth first** (every other endpoint is 🔒).
 4. **Schema:** write the **full v1 schema up front** (issue #15) from `01-data-model.md`.
 
 **Slices (with issues):**
-- **Slice 0 — Foundations:** hexagonal folders (`http/ app/ domain/ ports/ adapters/db/ config/`),
-  wire argon2 + jwt-cpp (verify MSYS2 *and* CI), startup migration runner, test-DB harness, full v1
-  schema migration.
-- **Slice 1 — Auth:** #16 repo ports + fakes, #17 argon2+JWT+middleware, #18 register/login/me, #24 FE auth.
+- **Slice 0 — Foundations: ✅ DONE (PR #40).** Hexagonal folders (`http/ app/ domain/ ports/
+  adapters/db/ config/`, each with a role README), argon2 + jwt-cpp wired + smoke-tested (MSYS2 + CI),
+  `Migrator` startup runner (owns `schema_migrations`, fails closed), `DbTest` harness, full v1 schema
+  (`0002_core_schema.sql`).
+- **Slice 1 — Auth (NEXT):** #16 repo ports + fakes, #17 argon2+JWT+middleware, #18 register/login/me, #24 FE auth.
 - **Slice 2 — Profile & Injuries:** #19 `/users/me`, #20 injuries CRUD, #25 FE forms (RHF+Zod).
 - **Slice 3 — Exercises + seed:** #21 catalog endpoints, #22 seed script, #26 FE browser.
 - **Slice 4 — Manual workouts:** #23 workouts CRUD, #27 FE builder.
@@ -139,10 +150,13 @@ See `docs/learning/how-to-run.md`. Two ways:
 **Ports:** 5173 (Vite dev), 8080 (backend), 5432 (Postgres dev), 3000 (containerized app UI).
 
 ## Next steps
-**Phase 2, Slice 0 — Foundations** (see `docs/phase-2-plan.md`):
-1. Create hexagonal backend folders (`http/ app/ domain/ ports/ adapters/db/ config/`).
-2. Wire **argon2** + **jwt-cpp** into CMake; verify build on MSYS2 **and** CI/Docker.
-3. Build the **startup migration runner** (+ convert existing `0001_init` if needed).
-4. Set up the **integration-test DB harness** (dedicated DB + transaction rollback).
-5. Write the **full v1 schema migration** from `01-data-model.md`.
-Then Slice 1 (Auth). Consider capturing the 4 locked decisions as ADRs (0013–00xx).
+**Phase 2, Slice 1 — Auth** (see `docs/phase-2-plan.md`), TDD per `02-api-contract.md`:
+1. **#16** `IUserRepository` port + in-memory fake (unit-testable) + `PgUserRepository` (integration).
+2. **#17** argon2 password hashing service + JWT issue/verify service + Crow auth **middleware**
+   (`Authorization: Bearer` → `CurrentUser`); promote auth deps from the test target onto
+   `fitapp_server` and add `libargon2`/`libssl` runtime libs to `Server/Dockerfile`.
+3. **#18** `POST /auth/register`, `POST /auth/login`, `GET /users/me` (controllers + DTOs).
+4. **#24** Client auth (login/register forms, token storage, authed fetch).
+
+Notes: the auth libs currently link into `fitapp_tests` only (Slice 0) — Slice 1 moves them to the
+server + image. Consider capturing the 4 Phase 2 locked decisions as ADRs (0013–00xx).
