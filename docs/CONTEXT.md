@@ -29,8 +29,13 @@ frontend test harnesses green. First migration (`0001_init`) applied. No busines
 **CI green** — `.github/workflows/ci.yml` builds + tests both halves on Ubuntu on every push/PR.
 **Containerized** — multi-stage Dockerfiles; images published to **GHCR** by
 `.github/workflows/images.yml`; full stack via `docker-compose.prod.yml`. Images build in CI (not on
-the 8 GB host). **Pending:** make GHCR packages public (user chose this) and verify
-`docker compose -f docker-compose.prod.yml pull && up -d` end-to-end.
+the 8 GB host).
+
+**⚠️ Branch state:** container work + `Server/`/`Client/` rename live on branch **`2026-06-30-50br`**,
+**NOT yet merged to `main`**. `images.yml` only triggers on `main`, so the GHCR images are still from
+the pre-rename `main` (service/image names unchanged, so `pull` still works — images are just a bit
+behind). **Pending:** (1) merge branch → main (re-runs image build), (2) make GHCR packages public
+(user chose this), (3) verify `docker compose -f docker-compose.prod.yml pull && up -d` end-to-end.
 
 ## Machine constraints (important)
 - **8 GB RAM.** Do NOT run a heavy C++ build and Docker simultaneously (caused OOM crashes). Building
@@ -111,6 +116,7 @@ See `docs/learning/how-to-run.md`. Two ways:
 **Ports:** 5173 (Vite dev), 8080 (backend), 5432 (Postgres dev), 3000 (containerized app UI).
 
 ## Next steps
-1. Make GHCR packages public → verify full container stack locally.
-2. **Phase 2** (auth, profile, exercise catalog, manual workouts) built test-first per
+1. Merge branch `2026-06-30-50br` → `main` (re-runs CI + image publish with new paths).
+2. Make GHCR packages public → verify full container stack locally (`localhost:3000`).
+3. **Phase 2** (auth, profile, exercise catalog, manual workouts) built test-first per
    `02-api-contract.md`.
