@@ -17,7 +17,8 @@ services:
       POSTGRES_PASSWORD: fitapp
     volumes:
       - fitapp_pgdata:/var/lib/postgresql/data
-      - ./Server/migrations:/docker-entrypoint-initdb.d:ro
+      # No initdb.d mount: the backend applies migrations on startup (it ships
+      # the SQL in its image and owns the schema).
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U fitapp -d fitapp"]
       interval: 5s

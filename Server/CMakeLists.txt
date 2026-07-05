@@ -32,7 +32,9 @@ else()
 endif()
 
 # --- application server ---
-add_executable(fitapp_server src/main.cpp)
+add_executable(fitapp_server
+    src/main.cpp
+    src/adapters/db/Migrator.cpp)
 target_include_directories(fitapp_server PRIVATE
     src
     ${CMAKE_SOURCE_DIR}/third_party/crow)
@@ -80,9 +82,19 @@ if(FITAPP_BUILD_TESTS)
         GIT_SHALLOW TRUE)
     FetchContent_MakeAvailable(jwt-cpp)
 
-    add_executable(fitapp_tests tests/test_main.cpp tests/test_auth_deps.cpp)
-    target_include_directories(fitapp_tests PRIVATE src)
-    target_link_libraries(fitapp_tests PRIVATE GTest::gtest GTest::gtest_main)
+    add_executable(fitapp_tests
+        tests/test_main.cpp
+        tests/test_auth_deps.cpp
+        tests/test_migrations.cpp
+        tests/support/TestDb.cpp
+        src/adapters/db/Migrator.cpp)
+    target_include_directories(fitapp_tests PRIVATE src tests)
+    target_link_libraries(fitapp_tests PRIVATE
+        GTest::gtest GTest::gtest_main
+        fitapp_pqxx)
+    # Absolute path so integration tests find the SQL regardless of ctest's CWD.
+    target_compile_definitions(fitapp_tests PRIVATE
+        FITAPP_MIGRATIONS_DIR="${CMAKE_SOURCE_DIR}/migrations")
     fitapp_add_auth_deps(fitapp_tests)
 
     include(GoogleTest)

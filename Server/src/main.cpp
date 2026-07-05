@@ -2,9 +2,12 @@
 
 #include <pqxx/pqxx>
 
+#include <chrono>
 #include <exception>
 #include <string>
+#include <thread>
 
+#include "adapters/db/Migrator.h"
 #include "config/Env.h"
 
 namespace {
@@ -17,9 +20,43 @@ std::string buildConnString() {
            " password=" + fitapp::envOr("DB_PASSWORD", "fitapp");
 }
 
+// Connect with a few retries so we tolerate the DB still warming up (e.g. the
+// Postgres container booting alongside us). Throws if it never comes up.
+pqxx::connection connectWithRetry() {
+    constexpr int maxAttempts = 5;
+    for (int attempt = 1;; ++attempt) {
+        try {
+            return pqxx::connection(buildConnString());
+        } catch (const std::exception& e) {
+            if (attempt >= maxAttempts) throw;
+            CROW_LOG_WARNING << "DB not ready (attempt " << attempt << "/" << maxAttempts
+                             << "): " << e.what();
+            std::this_thread::sleep_for(std::chrono::seconds(2));
+        }
+    }
+}
+
+// Apply pending migrations before serving. If this fails, the server must not
+// start: running against a half-migrated schema is worse than being down.
+bool runMigrations() {
+    try {
+        pqxx::connection conn = connectWithRetry();
+        fitapp::db::Migrator migrator(conn, fitapp::envOr("MIGRATIONS_DIR", "migrations"));
+        migrator.run();
+        return true;
+    } catch (const std::exception& e) {
+        CROW_LOG_ERROR << "migrations failed, refusing to start: " << e.what();
+        return false;
+    }
+}
+
 }  // namespace
 
 int main() {
+    if (!runMigrations()) {
+        return 1;
+    }
+
     crow::SimpleApp app;
 
     CROW_ROUTE(app, "/api/v1/health")

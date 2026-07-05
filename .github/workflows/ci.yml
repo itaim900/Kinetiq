@@ -14,6 +14,24 @@ jobs:
   backend:
     name: Backend (C++ build + tests)
     runs-on: ubuntu-latest
+
+    # A throwaway Postgres for the integration tests. The DbTest harness creates
+    # a "fitapp_test" database on it and applies migrations; unit tests ignore it.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: fitapp
+          POSTGRES_USER: fitapp
+          POSTGRES_PASSWORD: fitapp
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fitapp"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
     steps:
       - uses: actions/checkout@v4
 
@@ -42,6 +60,13 @@ jobs:
 
       - name: Test
         working-directory: Server
+        # DB_* point at the Postgres service so integration tests run for real
+        # (they self-skip if the DB is unreachable).
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_USER: fitapp
+          DB_PASSWORD: fitapp
         run: ctest --test-dir build --output-on-failure
 
   frontend:
