@@ -10,6 +10,24 @@ For durable/architectural facts, also update `docs/CONTEXT.md` (and add an ADR w
 
 ---
 
+## 2026-07-09 — VS Code
+- Onboarded (fresh interface): re-read `docs/CONTEXT.md` + this log, confirmed Phase 1 + Phase 2
+  Slice 0 status. Ran the full dev stack (Postgres, server, client) to verify the machine still
+  works end-to-end — all green, 13/13 `ctest` passing.
+- Did a guided code walkthrough of the `/api/v1/health` request path (Crow route in `main.cpp` →
+  DB check → JSON response → Vite proxy → React `App.tsx`) for the owner's learning goals; noted
+  the hexagonal folders (`http/ app/ domain/ ports/`) are still empty scaffolding until Slice 1.
+- Found + fixed a real bug: background dev-server processes from past sessions (7/5, 7/6) were
+  never terminated, left running as orphans, and squatted ports 5173/5174 — causing Vite to drift
+  to 5175 in this session and confusing "is the port stable" diagnosis.
+- Added `scripts/run-dev.ps1`: wraps server/client launch in a Windows Job Object
+  (`JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`) so the whole child process tree dies automatically if the
+  wrapper process ends for any reason (Ctrl-C, window close, forced kill) — verified through 4
+  levels of nesting for the client (npm → cmd → vite → node). Documented in
+  `docs/learning/how-to-run.md` (git-ignored, not in this commit).
+- Next: use `./scripts/run-dev.ps1 -Target server|client` going forward instead of raw
+  exe/`npm run dev`. Continue Phase 2, Slice 1 (Auth) — see `docs/phase-2-plan.md`.
+
 ## 2026-07-08 — Cowork
 - Set up cross-interface continuity: added root `CLAUDE.md` (auto-loaded by both VS Code and Cowork)
   and this `WORKLOG.md`. Both now point at `docs/CONTEXT.md` as the source of truth.
