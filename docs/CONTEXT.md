@@ -51,10 +51,11 @@ case list in `docs/02-api-contract.md`; full step-by-step build log in
 design): Google OAuth, "forgot password" reset (needs email infra), account deletion (needs
 re-auth + cascade-delete design), login rate-limiting, email verification.
 
-**Not yet built:** `PgUserRepository` (real adapter, rest of #16), argon2/JWT/authenticator
-(#17), and all the HTTP-level tests + handlers (#18: register, login, me, change-password).
-`ctest` = **21/21** locally (13 Slice-0 baseline + 8 new). Dev stack re-verified end-to-end
-(Postgres → Server → Client proxy → health OK).
+**`#16` COMPLETE (2026-07-12):** `db::PgUserRepository` (real Postgres adapter) added, tested via
+`DbTest` (5 integration tests, same contract as the fake). **Not yet built:** argon2/JWT/
+authenticator (#17), and all the HTTP-level tests + handlers (#18: register, login, me,
+change-password). `ctest` = **27/27** locally (22 previous + 5 new). Dev stack re-verified
+end-to-end (Postgres → Server → Client proxy → health OK).
 
 ## Machine constraints (important)
 - **8 GB RAM.** Do NOT run a heavy C++ build and Docker simultaneously (caused OOM crashes). Building
@@ -131,8 +132,9 @@ endpoint → UI), **auth first** (every other endpoint is 🔒).
   adapters/db/ config/`, each with a role README), argon2 + jwt-cpp wired + smoke-tested (MSYS2 + CI),
   `Migrator` startup runner (owns `schema_migrations`, fails closed), `DbTest` harness, full v1 schema
   (`0002_core_schema.sql`).
-- **Slice 1 — Auth (IN PROGRESS):** #16 repo ports + fakes (🟡 `IUserRepository` + in-memory fake
-  done, `PgUserRepository` pending), #17 argon2+JWT+**authenticator fn** (not Crow middleware —
+- **Slice 1 — Auth (IN PROGRESS):** #16 repo ports + fakes ✅ **done** (`IUserRepository` +
+  `InMemoryUserRepository` + `PgUserRepository`, all TDD'd), #17 argon2+JWT+**authenticator fn**
+  (not Crow middleware —
   see Testing architecture), #18 register/login/me/**change-password**, #24 Client auth. Password
   policy (min 8 chars + ≥1 uppercase) and login error shape (generic 401, no email-enumeration)
   locked in `docs/02-api-contract.md`. **Explicitly deferred to future slices:** Google OAuth,
@@ -192,8 +194,8 @@ See `docs/learning/how-to-run.md`. Two ways:
 
 ## Next steps
 **Phase 2, Slice 1 — Auth** (see `docs/phase-2-plan.md`), TDD per `02-api-contract.md`:
-1. **#16** ~~`IUserRepository` port + `InMemoryUserRepository` fake~~ ✅ done (2026-07-12) +
-   `PgUserRepository` (integration, still pending).
+1. ~~**#16** `IUserRepository` port + `InMemoryUserRepository` fake + `PgUserRepository`~~ ✅ done
+   (2026-07-12).
 2. **#17** argon2 hasher + JWT issue/verify + **authenticator** (`Authorization: Bearer` → `CurrentUser`
    or 401); promote auth deps from test target onto `fitapp_server` + `Server/Dockerfile` runtime libs.
 3. **#18** `POST /auth/register`, `POST /auth/login`, `GET /users/me` (handlers + DTOs; test via

@@ -17,7 +17,7 @@ the slice progresses, don't wait until it's done.
 - [x] `domain::PasswordPolicy` — 2026-07-12 (revised same day)
 - [x] `ports::IUserRepository` + `DuplicateEmailError` — 2026-07-12
 - [x] `tests/support::InMemoryUserRepository` (fake) — 2026-07-12
-- [ ] `adapters::db::PgUserRepository` (real Postgres adapter) — rest of #16
+- [x] `db::PgUserRepository` (real Postgres adapter) — 2026-07-12. **#16 complete.**
 - [ ] argon2 password hasher wrapper — #17
 - [ ] JWT issue/verify service — #17
 - [ ] Authenticator function (`Authorization: Bearer` → `CurrentUser` or 401) — #17
@@ -101,6 +101,24 @@ it's a data type, nothing to assert against.
 /auth/password` spec), `phase-2-plan.md` §5/§9 (Slice 1 bullet, scope), `CONTEXT.md` (status,
 docs map), this file created.
 
+### Step 5 — `db::PgUserRepository` (2026-07-12, TDD loop 3 — different pyramid layer)
+The first **adapter integration** test in this slice (vs. domain/unit so far) — needs a real,
+running Postgres, unlike everything before it.
+1. Wrote `Server/tests/test_pg_user_repository.cpp`: the same 5 cases as
+   `test_user_repository.cpp`, but as `TEST_F(DbTest, ...)` against a `PgUserRepository` that
+   didn't exist yet.
+2. Built — **red**: `fatal error: adapters/db/PgUserRepository.h: No such file or directory`.
+3. Wrote `Server/src/adapters/db/PgUserRepository.h/.cpp`: real SQL (`INSERT ... RETURNING id`,
+   `SELECT ... WHERE email = $1`), taking a `pqxx::work&` it doesn't own (so it composes with
+   `DbTest`'s per-test rollback transaction rather than conflicting with it — a `pqxx::connection`
+   can only have one transaction open at a time), and catching `pqxx::unique_violation` to
+   re-throw as `ports::DuplicateEmailError`.
+4. Built — clean compile, but with `exec_params` deprecation warnings (this libpqxx version
+   prefers `exec(zview, params)`). Fixed before even running the tests — no reason to carry a
+   warning forward.
+5. Ran the 5 new tests — **green on the first attempt**, no assertion-failure iteration needed.
+6. Full suite: **27/27** (22 previous + 5 new). **`#16` is now complete.**
+
 ---
 
 ## Files touched so far
@@ -113,7 +131,9 @@ docs map), this file created.
 | `Server/tests/support/InMemoryUserRepository.h` | Fake repo for tests |
 | `Server/tests/test_password_policy.cpp` | 4 tests |
 | `Server/tests/test_user_repository.cpp` | 5 tests |
-| `Server/CMakeLists.txt` | Registered the two new test files |
+| `Server/src/adapters/db/PgUserRepository.h/.cpp` | Real Postgres-backed `IUserRepository` |
+| `Server/tests/test_pg_user_repository.cpp` | 5 integration tests (`DbTest`) |
+| `Server/CMakeLists.txt` | Registered all new test/source files |
 
 ---
 

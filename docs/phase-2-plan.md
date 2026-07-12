@@ -75,7 +75,8 @@ The groundwork every later slice needs. Detailed breakdown in §6.
 - **Full v1 schema migration** from `01-data-model.md`.
 
 ### Slice 1 — Auth  (issues #16, #17, #18, #24)
-- `IUserRepository` port + in-memory fake. ✅ done 2026-07-12 (`PgUserRepository` still pending).
+- `IUserRepository` port + in-memory fake + `PgUserRepository` (Postgres adapter). ✅ **#16
+  complete**, 2026-07-12.
 - `domain::PasswordPolicy` — min 8 chars + ≥1 uppercase. ✅ done 2026-07-12.
 - argon2 password hashing; JWT issue/verify; auth **authenticator function** (not Crow middleware
   — see §8) → `CurrentUser`.

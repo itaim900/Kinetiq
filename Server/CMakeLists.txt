@@ -89,8 +89,10 @@ if(FITAPP_BUILD_TESTS)
         tests/test_http_harness.cpp
         tests/test_password_policy.cpp
         tests/test_user_repository.cpp
+        tests/test_pg_user_repository.cpp
         tests/support/TestDb.cpp
-        src/adapters/db/Migrator.cpp)
+        src/adapters/db/Migrator.cpp
+        src/adapters/db/PgUserRepository.cpp)
     target_include_directories(fitapp_tests PRIVATE
         src tests
         ${CMAKE_SOURCE_DIR}/third_party/crow)  # Crow for the in-process HTTP harness

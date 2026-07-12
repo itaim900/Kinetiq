@@ -10,6 +10,25 @@ For durable/architectural facts, also update `docs/CONTEXT.md` (and add an ADR w
 
 ---
 
+## 2026-07-12 — VS Code
+- Started Phase 2 Slice 1 (Auth), TDD throughout (red confirmed via failed compile/assertions,
+  then green each time): `domain::User`, `domain::PasswordPolicy` (settled on min 8 chars + one
+  uppercase letter after a same-day revision), `ports::IUserRepository` + `DuplicateEmailError`,
+  the `InMemoryUserRepository` fake, and `db::PgUserRepository` (real Postgres adapter, same
+  contract as the fake). **`#16` (repository ports + fakes) is now fully complete.**
+- Locked scope decisions, each recorded with reasoning in `02-api-contract.md`: generic `401` on
+  login failure (no email enumeration), added `PATCH /auth/password` (change password while
+  logged in) to Slice 1; explicitly **deferred** Google OAuth, "forgot password" reset, account
+  deletion, login rate-limiting, and email verification to future slices.
+- Added `docs/phase-2-slice-1-auth.md`: a living, step-by-step build log for the slice (decisions,
+  TDD loops, files touched, progress checklist) — keep updating it as the slice continues, don't
+  wait until it's done.
+- `ctest` = **27/27** (was 13 at session start).
+- Next: `#17` — argon2 password hasher + JWT issue/verify + authenticator function (deliberately
+  **not** Crow middleware, since the in-process `HttpClient` test harness doesn't run it — see
+  `phase-2-plan.md` §8), then promote those deps from `fitapp_tests` onto `fitapp_server` +
+  `Server/Dockerfile`.
+
 ## 2026-07-09 — VS Code
 - Onboarded (fresh interface): re-read `docs/CONTEXT.md` + this log, confirmed Phase 1 + Phase 2
   Slice 0 status. Ran the full dev stack (Postgres, server, client) to verify the machine still
