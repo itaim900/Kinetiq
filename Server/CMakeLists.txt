@@ -87,6 +87,8 @@ if(FITAPP_BUILD_TESTS)
         tests/test_auth_deps.cpp
         tests/test_migrations.cpp
         tests/test_http_harness.cpp
+        tests/test_password_policy.cpp
+        tests/test_user_repository.cpp
         tests/support/TestDb.cpp
         src/adapters/db/Migrator.cpp)
     target_include_directories(fitapp_tests PRIVATE

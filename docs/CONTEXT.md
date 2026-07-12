@@ -39,9 +39,22 @@ merged to `main`).** Hexagonal folders, argon2 + jwt-cpp wired (smoke tests gree
 startup migration runner, full v1 schema (`0002_core_schema.sql`), integration-test DB harness
 (separate `fitapp_test` DB + per-test transaction rollback). **In-process HTTP test harness**
 (`tests/support/HttpClient.h`) added; testing architecture documented in `phase-2-plan.md` §8.
-`ctest` = **13/13** locally and in CI (integration tests run against a Postgres service in the CI
-Server job). Dev stack re-verified end-to-end (Postgres → Server → Client proxy → health OK).
-**Slice 1 (Auth) is next.** See "Phase 2 plan" below and `docs/phase-2-plan.md`.
+
+**Slice 1 (Auth) IN PROGRESS (started 2026-07-12).** Issue #16 half-done: `domain::User` +
+`ports::IUserRepository` (+ `DuplicateEmailError`) + `tests/support/InMemoryUserRepository`
+fake, all TDD'd (red confirmed via failed compile, then green). `domain::PasswordPolicy` done:
+**min 8 chars + at least one uppercase letter** (superseded an earlier length-only/10-char
+version same day). Scope also grew to include `PATCH /auth/password` (change password while
+logged in — no email infra needed, unlike the deferred reset flow). Full decision log + test
+case list in `docs/02-api-contract.md`; full step-by-step build log in
+`docs/phase-2-slice-1-auth.md`. **Explicitly deferred** (2026-07-12, each needs its own future
+design): Google OAuth, "forgot password" reset (needs email infra), account deletion (needs
+re-auth + cascade-delete design), login rate-limiting, email verification.
+
+**Not yet built:** `PgUserRepository` (real adapter, rest of #16), argon2/JWT/authenticator
+(#17), and all the HTTP-level tests + handlers (#18: register, login, me, change-password).
+`ctest` = **21/21** locally (13 Slice-0 baseline + 8 new). Dev stack re-verified end-to-end
+(Postgres → Server → Client proxy → health OK).
 
 ## Machine constraints (important)
 - **8 GB RAM.** Do NOT run a heavy C++ build and Docker simultaneously (caused OOM crashes). Building
@@ -51,6 +64,11 @@ Server job). Dev stack re-verified end-to-end (Postgres → Server → Client pr
   the port (reversible — see `docs/learning/how-to-run.md`).
 - Backend commands need `C:\msys64\ucrt64\bin` on PATH (run from `Server/`). `vcpkg` exists at `C:\Users\<user>\vcpkg`
   but is **unused** (abandoned — see below).
+- **Launch server/client via `scripts/run-dev.ps1 -Target server|client`** (from project root),
+  not the raw exe / `npm run dev` directly. Past sessions left orphaned dev-server processes
+  running for days, squatting ports and wasting RAM — the wrapper binds the child process tree to
+  a Windows Job Object (`JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`) so it's killed automatically if the
+  wrapper process ever ends, even via a forced kill. Verified through 4 levels of process nesting.
 - **GitHub CLI (`gh`)** installed at `C:\Program Files\GitHub CLI\gh.exe` (v2.95.0), logged in as
   `itaim900`. On system PATH; restart terminal/Cursor if `gh` not found. Token scopes: `repo`,
   `read:org`, `gist` (no `read:packages` unless refreshed).
@@ -113,8 +131,12 @@ endpoint → UI), **auth first** (every other endpoint is 🔒).
   adapters/db/ config/`, each with a role README), argon2 + jwt-cpp wired + smoke-tested (MSYS2 + CI),
   `Migrator` startup runner (owns `schema_migrations`, fails closed), `DbTest` harness, full v1 schema
   (`0002_core_schema.sql`).
-- **Slice 1 — Auth (NEXT):** #16 repo ports + fakes, #17 argon2+JWT+**authenticator fn** (not Crow
-  middleware — see Testing architecture), #18 register/login/me, #24 Client auth.
+- **Slice 1 — Auth (IN PROGRESS):** #16 repo ports + fakes (🟡 `IUserRepository` + in-memory fake
+  done, `PgUserRepository` pending), #17 argon2+JWT+**authenticator fn** (not Crow middleware —
+  see Testing architecture), #18 register/login/me/**change-password**, #24 Client auth. Password
+  policy (min 8 chars + ≥1 uppercase) and login error shape (generic 401, no email-enumeration)
+  locked in `docs/02-api-contract.md`. **Explicitly deferred to future slices:** Google OAuth,
+  forgot-password reset, account deletion, login rate-limiting, email verification.
 - **Slice 2 — Profile & Injuries:** #19 `/users/me`, #20 injuries CRUD, #25 FE forms (RHF+Zod).
 - **Slice 3 — Exercises + seed:** #21 catalog endpoints, #22 seed script, #26 FE browser.
 - **Slice 4 — Manual workouts:** #23 workouts CRUD, #27 FE builder.
@@ -149,6 +171,7 @@ port/fake → green → refactor.
 - `05-roadmap.md` — phased plan + definitions of done (Phase 1 complete)
 - `phase-1-summary.md` — Phase 1 recap (file inventory, decisions, verification)
 - `phase-2-plan.md` — Phase 2 plan (slices, locked decisions, TDD workflow)
+- `phase-2-slice-1-auth.md` — Slice 1 (Auth) step-by-step build log: every decision and file, in order
 - `adr/` — decision records (note: 0003 & 0005 superseded by 0011 & 0012)
 - `learning/` — git-ignored personal notes: `code-walkthrough.md`, `how-to-run.md`,
   `session-log-phase1-spike.md`
@@ -169,10 +192,13 @@ See `docs/learning/how-to-run.md`. Two ways:
 
 ## Next steps
 **Phase 2, Slice 1 — Auth** (see `docs/phase-2-plan.md`), TDD per `02-api-contract.md`:
-1. **#16** `IUserRepository` port + `InMemoryUserRepository` fake + `PgUserRepository` (integration).
+1. **#16** ~~`IUserRepository` port + `InMemoryUserRepository` fake~~ ✅ done (2026-07-12) +
+   `PgUserRepository` (integration, still pending).
 2. **#17** argon2 hasher + JWT issue/verify + **authenticator** (`Authorization: Bearer` → `CurrentUser`
    or 401); promote auth deps from test target onto `fitapp_server` + `Server/Dockerfile` runtime libs.
-3. **#18** `POST /auth/register`, `POST /auth/login`, `GET /users/me` (handlers + DTOs; test via `HttpClient`).
+3. **#18** `POST /auth/register`, `POST /auth/login`, `GET /users/me` (handlers + DTOs; test via
+   `HttpClient`) — write the failing HTTP tests first (register: valid/duplicate-email/weak-password;
+   login: valid/generic-401), *then* implement. Not started yet.
 4. **#24** Client auth (login/register forms, token storage, authed fetch).
 
 Notes: auth libs currently link into `fitapp_tests` only (Slice 0) — Slice 1 moves them to the Server

@@ -60,10 +60,14 @@ This is what makes the codebase test-driven.
 Request: `{ email, password, display_name }`
 Response `201`: `{ user, access_token }`
 
+Password policy: **minimum 8 characters, at least one uppercase letter** (updated 2026-07-12,
+supersedes the earlier length-only/10-char decision).
+
 Test cases:
 - ✅ valid input → `201`, returns token; `password`/`password_hash` never appear in response
-- ❌ duplicate email → `409`
-- ❌ invalid email or weak password → `422` with field errors
+- ❌ duplicate email → `409` (case-insensitive: `email` is `citext` — `Foo@x.com` collides with
+  `foo@x.com`)
+- ❌ invalid email, password < 8 chars, or password with no uppercase letter → `422` with field errors
 - ❌ missing required field → `422`
 
 ### `POST /auth/login`
@@ -81,6 +85,24 @@ Response `200`: current user profile.
 Test cases:
 - ✅ valid token → `200`
 - ❌ missing / expired / invalid token → `401`
+
+### `PATCH /auth/password` 🔒
+Change password while logged in (distinct from the deferred "forgot password" reset flow below —
+this one needs no email, the user already knows their current password).
+
+Request: `{ current_password, new_password }`
+Response `200`
+
+Test cases:
+- ✅ correct `current_password` + `new_password` passes policy → `200`; user can subsequently log
+  in with the new password (and the old one no longer works)
+- ❌ wrong `current_password` → `401`, generic message (same "don't leak more than necessary"
+  principle as login)
+- ❌ `new_password` fails the policy (< 8 chars or no uppercase) → `422`
+- ❌ unauthenticated (missing/expired/invalid token) → `401`
+
+**Logout:** no endpoint. v1 uses short-lived, stateless JWTs with no server-side session (see
+Conventions above) — "logging out" is just the client discarding its stored token.
 
 ---
 
@@ -206,6 +228,24 @@ Test cases (run against a **mocked `ILLMClient`** — fast, free, deterministic)
 
 ## Deferred to later phases
 
+- **Google OAuth login** — sign in with a Google account. Deferred out of Slice 1 (2026-07-12
+  decision): it needs a Google Cloud OAuth client, server-side ID token verification against
+  Google's JWKS, and a schema change (nullable `password_hash`, an auth-provider marker on
+  `Users`) — bigger than a test case, treat as its own future slice once email/password auth
+  (register/login/me) is done.
+- **"Forgot password" reset flow** — deferred (2026-07-12 decision), same shape of reason as
+  OAuth: needs an email-sending dependency (nothing like that exists in the stack), a time-limited
+  single-use reset-token table, and its own security design (token expiry, rate-limiting the
+  request endpoint, and re-litigating the no-enumeration question for "is this email registered"
+  in the reset-request step too). **Change password while logged in** (above) ships in Slice 1 and
+  covers the common case that doesn't need email.
+- **Account deletion** — deferred (2026-07-12 decision). Not just a missing `DELETE /users/me`:
+  needs a design for re-authentication before a destructive action, and a decision on soft- vs
+  hard-delete given the FK fan-out (workouts, injuries, generation requests all reference `Users`).
+- **Rate limiting / lockout after repeated failed logins** — real security value, needs a counter
+  store and its own design; not in v1.
+- **Email verification on registration** — bundle with the reset flow above when email infra is
+  built.
 - **Refresh tokens** (silent re-auth) — enhancement to the auth scheme above.
 - **Asynchronous `/generate`** (`202 Accepted` + job polling / SSE) — only if latency becomes a problem.
 - **Workout history & feedback endpoints** (Phase 4): logging completed sessions, RPE, set-level logs.

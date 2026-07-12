@@ -75,11 +75,19 @@ The groundwork every later slice needs. Detailed breakdown in §6.
 - **Full v1 schema migration** from `01-data-model.md`.
 
 ### Slice 1 — Auth  (issues #16, #17, #18, #24)
-- `IUserRepository` port + in-memory fake.
-- argon2 password hashing; JWT issue/verify; auth middleware → `CurrentUser`.
-- `POST /auth/register`, `POST /auth/login`, `GET /auth/me`.
+- `IUserRepository` port + in-memory fake. ✅ done 2026-07-12 (`PgUserRepository` still pending).
+- `domain::PasswordPolicy` — min 8 chars + ≥1 uppercase. ✅ done 2026-07-12.
+- argon2 password hashing; JWT issue/verify; auth **authenticator function** (not Crow middleware
+  — see §8) → `CurrentUser`.
+- `POST /auth/register`, `POST /auth/login`, `GET /auth/me`, **`PATCH /auth/password`** (change
+  password while logged in — added to scope 2026-07-12, no new issue # yet, folds into #18).
 - Frontend: register/login flow, in-memory token handling.
-- **Contract tests:** duplicate email → 409; wrong password → 401 (generic); token required on `me`.
+- **Contract tests:** duplicate email → 409; wrong password → 401 (generic, no email
+  enumeration); weak password → 422; token required on `me`; wrong current-password on change → 401.
+- **Explicitly deferred** (2026-07-12): Google OAuth, forgot-password/reset (needs email infra),
+  account deletion (needs its own re-auth/cascade design), login rate-limiting, email verification.
+  See `02-api-contract.md` "Deferred to later phases". Full step-by-step log:
+  `docs/phase-2-slice-1-auth.md`.
 
 ### Slice 2 — Profile & Injuries  (#19, #20, #25)
 - `GET`/`PATCH /users/me` (partial update, validation).
