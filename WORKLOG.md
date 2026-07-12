@@ -10,6 +10,25 @@ For durable/architectural facts, also update `docs/CONTEXT.md` (and add an ADR w
 
 ---
 
+## 2026-07-12 — VS Code (2)
+- Finished `#17`: `IPasswordHasher`/`Argon2PasswordHasher` (real argon2id, fresh random salt per
+  call via OpenSSL `RAND_bytes`), `ITokenService`/`JwtTokenService` (HS256, **24h expiry** —
+  locked decision, since v1 has no refresh tokens this number *is* the session length), and the
+  `authenticate()` function in `http/middleware/Authenticator.h` — deliberately a plain function,
+  not Crow middleware, since `HttpClient`'s `handle_full()` doesn't run middleware. All 3 pieces
+  TDD'd (red via failed compile, green on first implementation attempt each time).
+- Promoted auth deps from `fitapp_tests`-only onto `fitapp_server`: restructured `CMakeLists.txt`
+  (jwt-cpp `FetchContent` moved out from under `FITAPP_BUILD_TESTS`), updated `Server/Dockerfile`
+  (build stage already had the dev packages via CI; runtime stage needed `libargon2-1` + `libssl3`
+  added — **not build-verified locally**, this project never builds Docker images on the 8GB dev
+  machine, so CI is the real check).
+- Hit one snag: first rebuild after the CMake change failed to *link* `fitapp_server.exe`
+  ("Permission denied") — a stale server process from earlier in the session (launched via
+  `run-dev.ps1`, never stopped) still had the file open. Killed it, rebuilt clean.
+- `ctest` = **39/39** (was 27 at the start of this segment). **`#16` and `#17` are both complete.**
+- Next: `#18` — HTTP-level tests + handlers for register/login/me/change-password, likely via
+  small `app/` services wiring today's pieces together for the first time.
+
 ## 2026-07-12 — VS Code
 - Started Phase 2 Slice 1 (Auth), TDD throughout (red confirmed via failed compile/assertions,
   then green each time): `domain::User`, `domain::PasswordPolicy` (settled on min 8 chars + one

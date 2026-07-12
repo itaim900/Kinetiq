@@ -8,9 +8,11 @@
 # ---------- build stage ----------
 FROM ubuntu:24.04 AS build
 
+# libargon2-dev + libssl-dev: Slice 1 (#17) auth deps (argon2 hashing +
+# jwt-cpp's OpenSSL-backed signing), now linked into fitapp_server itself.
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         cmake ninja-build g++ git ca-certificates \
-        libasio-dev libpq-dev \
+        libasio-dev libpq-dev libargon2-dev libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src
@@ -28,9 +30,16 @@ RUN cmake -S Server -B build -G Ninja \
 FROM ubuntu:24.04 AS runtime
 
 # libpqxx is linked statically; at runtime we only need the C client (libpq5)
-# and the C++ standard library.
+# and the C++ standard library. libargon2-1 + libssl3: Slice 1 (#17) auth
+# deps' shared runtime libs (jwt-cpp itself is header-only, nothing to ship
+# for it beyond the OpenSSL lib it already needs).
+# NOTE: package names not verified by a local build (this project never
+# builds Docker images locally, per the 8GB RAM constraint in CONTEXT.md --
+# same situation as the libpqxx/FITAPP_FETCH_LIBPQXX issue). CI is the real
+# check; if `apt-get install` fails here, these are the first names to fix
+# (Ubuntu sometimes renames runtime SSL packages, e.g. libssl3 -> libssl3t64).
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        libpq5 libstdc++6 \
+        libpq5 libstdc++6 libargon2-1 libssl3 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /src/build/fitapp_server /usr/local/bin/fitapp_server

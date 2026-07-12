@@ -78,8 +78,10 @@ The groundwork every later slice needs. Detailed breakdown in §6.
 - `IUserRepository` port + in-memory fake + `PgUserRepository` (Postgres adapter). ✅ **#16
   complete**, 2026-07-12.
 - `domain::PasswordPolicy` — min 8 chars + ≥1 uppercase. ✅ done 2026-07-12.
-- argon2 password hashing; JWT issue/verify; auth **authenticator function** (not Crow middleware
-  — see §8) → `CurrentUser`.
+- `IPasswordHasher`/`Argon2PasswordHasher`; `ITokenService`/`JwtTokenService` (HS256, 24h expiry —
+  locked decision, no refresh tokens in v1); auth **authenticator function** (not Crow middleware
+  — see §8) → `CurrentUser`. Promoted onto `fitapp_server` + `Server/Dockerfile`. ✅ **#17
+  complete**, 2026-07-12.
 - `POST /auth/register`, `POST /auth/login`, `GET /auth/me`, **`PATCH /auth/password`** (change
   password while logged in — added to scope 2026-07-12, no new issue # yet, folds into #18).
 - Frontend: register/login flow, in-memory token handling.

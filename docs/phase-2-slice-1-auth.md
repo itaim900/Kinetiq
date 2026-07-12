@@ -18,10 +18,11 @@ the slice progresses, don't wait until it's done.
 - [x] `ports::IUserRepository` + `DuplicateEmailError` — 2026-07-12
 - [x] `tests/support::InMemoryUserRepository` (fake) — 2026-07-12
 - [x] `db::PgUserRepository` (real Postgres adapter) — 2026-07-12. **#16 complete.**
-- [ ] argon2 password hasher wrapper — #17
-- [ ] JWT issue/verify service — #17
-- [ ] Authenticator function (`Authorization: Bearer` → `CurrentUser` or 401) — #17
-- [ ] Promote auth deps from `fitapp_tests` to `fitapp_server` + `Server/Dockerfile` — #17
+- [x] `IPasswordHasher` port + `Argon2PasswordHasher` adapter — 2026-07-12
+- [x] `ITokenService` port + `JwtTokenService` adapter, 24h expiry — 2026-07-12
+- [x] Authenticator function (`Authorization: Bearer` → `CurrentUser` or `nullopt`) — 2026-07-12
+- [x] Promoted auth deps from `fitapp_tests`-only to `fitapp_server` + `Server/Dockerfile` —
+  2026-07-12. **#17 complete.**
 - [ ] `POST /auth/register` (handler + DTOs + HTTP tests) — #18
 - [ ] `POST /auth/login` (handler + DTOs + HTTP tests) — #18
 - [ ] `GET /auth/me` (handler + HTTP tests) — #18
@@ -60,6 +61,14 @@ Considered as part of "full CRUD on the user." Not just a missing route — a de
 needs its own design (require re-authentication before deleting? soft- vs hard-delete, given
 `Users` is referenced by `Workouts`, `User_Injuries`, `Generation_Requests` via FK). Left out of
 Slice 1; `Update` (`PATCH /users/me`) was already Slice 2 scope regardless.
+
+### 2026-07-12 — JWT access token lifetime: 24 hours
+v1 has no refresh tokens (locked decision), so this number *is* the session length. Rejected
+1 hour (would force re-login roughly hourly during real use, likely to feel broken) and 7 days
+(too large a window if a token leaks). 24 hours balances "log in once a day" convenience against
+keeping a leaked-token blast radius same-day. Implemented as a constructor parameter on
+`JwtTokenService` (not hardcoded), so tests can construct one with a short/negative TTL to
+exercise expiry synchronously.
 
 ### 2026-07-12 — Change password (while logged in): added to Slice 1
 No email infra needed — the user is already authenticated, submits current + new password, the
@@ -119,6 +128,64 @@ running Postgres, unlike everything before it.
 5. Ran the 5 new tests — **green on the first attempt**, no assertion-failure iteration needed.
 6. Full suite: **27/27** (22 previous + 5 new). **`#16` is now complete.**
 
+### Step 6 — `IPasswordHasher` + `Argon2PasswordHasher` (2026-07-12, TDD loop 4)
+1. Wrote `Server/tests/test_password_hasher.cpp` (round-trip, wrong password fails, and — a real
+   security property, not just a nice-to-have — two hashes of the *same* password must differ,
+   proving a fresh random salt is used each call) against a class that didn't exist.
+2. Built — **red**: `fatal error: adapters/crypto/Argon2PasswordHasher.h: No such file or
+   directory`.
+3. Verified the exact argon2 C API in the installed header (`argon2.h`) before writing anything —
+   `argon2_encodedlen`, `argon2id_hash_encoded`, `argon2id_verify`, `argon2_error_message` —
+   rather than guessing signatures for a security-relevant function.
+4. Wrote `Server/src/ports/IPasswordHasher.h` and
+   `Server/src/adapters/crypto/Argon2PasswordHasher.{h,cpp}`: generates a fresh random salt per
+   call via OpenSSL's `RAND_bytes` (argon2's encoded output embeds the salt, so `verify()` doesn't
+   need it separately).
+5. Built + ran — **green**, 3/3 (slow: ~1.3–2.4s per test, argon2's deliberate memory-hardness —
+   64 MiB cost, same params the Slice 0 smoke test already proved work on this toolchain). This is
+   exactly why a fast in-memory fake will matter once #18 needs many service-level tests.
+
+### Step 7 — `ITokenService` + `JwtTokenService` (2026-07-12, TDD loop 5)
+1. Wrote `Server/tests/test_token_service.cpp`: issue→verify round-trip, wrong secret rejected,
+   malformed token rejected, and expired token rejected (constructed with a **negative** TTL so
+   the token is already expired the instant it's issued — lets the test assert synchronously
+   instead of sleeping).
+2. Confirmed jwt-cpp's `exp` claim is validated **automatically** by `verifier.verify()` whenever
+   present (checked the vendored header directly rather than assuming) — so `set_expires_at()` at
+   issue time is all that's needed; no separate expiry-check call.
+3. Built — **red**: `fatal error: ... JwtTokenService.h: No such file or directory`.
+4. Wrote `Server/src/ports/ITokenService.h` and `Server/src/adapters/crypto/JwtTokenService.{h,cpp}`
+   — HS256, issuer `"fitapp"`, subject = user id, TTL as a constructor parameter (not hardcoded)
+   so tests can control it.
+5. Built + ran — **green**, 4/4 on the first attempt.
+
+### Step 8 — Authenticator (2026-07-12, TDD loop 6)
+1. Wrote `Server/tests/test_authenticator.cpp` directly constructing `crow::request` objects
+   (no HTTP harness needed) covering all 5 cases from `phase-2-plan.md` §8's design note: valid,
+   missing header, wrong scheme (`Basic` instead of `Bearer`), malformed token, expired token.
+2. Built — **red**: `fatal error: http/middleware/Authenticator.h: No such file or directory`.
+3. Wrote `Server/src/http/middleware/Authenticator.h` — a plain function (`authenticate(req,
+   tokens) -> optional<CurrentUser>`), deliberately **not** Crow middleware, since `HttpClient`'s
+   `app.handle_full()` doesn't run middleware at all. Removed the now-redundant `.gitkeep` from
+   that folder.
+4. Built + ran — **green**, 5/5 on the first attempt.
+
+### Step 9 — Promote auth deps to `fitapp_server` (2026-07-12)
+Restructured `CMakeLists.txt`: moved the jwt-cpp `FetchContent` block out from under
+`FITAPP_BUILD_TESTS` (so it's available unconditionally), added `Argon2PasswordHasher.cpp` +
+`JwtTokenService.cpp` to `fitapp_server`'s sources, and called `fitapp_add_auth_deps(fitapp_server)`.
+Hit one snag: the very first rebuild failed to *link* (not compile) with "Permission denied" — a
+stale `fitapp_server.exe` from earlier in the session (started via `run-dev.ps1`, never stopped)
+still had the file open. Killed it, rebuilt clean.
+
+Updated `Server/Dockerfile`'s runtime stage to install `libargon2-1` + `libssl3` (the build stage
+already needed `libargon2-dev` + `libssl-dev`, which CI's Ubuntu job already had from Slice 0).
+**Not verified by a local build** — this project never builds Docker images locally (8GB RAM
+constraint) — CI is the real check, same situation as the earlier libpqxx/`FITAPP_FETCH_LIBPQXX`
+packaging issue.
+
+Full suite after all of #17: **39/39** (27 previous + 12 new). **`#17` is now complete.**
+
 ---
 
 ## Files touched so far
@@ -133,14 +200,25 @@ running Postgres, unlike everything before it.
 | `Server/tests/test_user_repository.cpp` | 5 tests |
 | `Server/src/adapters/db/PgUserRepository.h/.cpp` | Real Postgres-backed `IUserRepository` |
 | `Server/tests/test_pg_user_repository.cpp` | 5 integration tests (`DbTest`) |
-| `Server/CMakeLists.txt` | Registered all new test/source files |
+| `Server/src/ports/IPasswordHasher.h` | Password hasher port |
+| `Server/src/adapters/crypto/Argon2PasswordHasher.h/.cpp` | Real argon2id hasher, random salt per call |
+| `Server/tests/test_password_hasher.cpp` | 3 tests |
+| `Server/src/ports/ITokenService.h` | Token service port |
+| `Server/src/adapters/crypto/JwtTokenService.h/.cpp` | Real HS256 JWT, configurable TTL |
+| `Server/tests/test_token_service.cpp` | 4 tests |
+| `Server/src/http/middleware/Authenticator.h` | `authenticate()` fn + `CurrentUser` (not Crow middleware) |
+| `Server/tests/test_authenticator.cpp` | 5 tests |
+| `Server/CMakeLists.txt` | Registered all new files; promoted auth deps onto `fitapp_server` |
+| `Server/Dockerfile` | Added argon2/OpenSSL dev + runtime packages |
 
 ---
 
 ## What's next
 
-Per the checklist above: `PgUserRepository` (the real Postgres half of #16), then #17 (argon2 +
-JWT + authenticator function — **not** Crow middleware, see `phase-2-plan.md` §8 for why), then
-#18's HTTP-level tests and handlers for all four endpoints (register, login, me,
-change-password), written test-first against `02-api-contract.md`'s test cases the same way
-Steps 2–3 were.
+`#16` and `#17` are both complete. Next: **`#18`** — HTTP-level tests and handlers for all four
+endpoints (register, login, me, change-password), written test-first against
+`02-api-contract.md`'s test cases, the same red-then-green rhythm as every step so far. This is
+where `PgUserRepository`, `Argon2PasswordHasher`, `JwtTokenService`, and the authenticator all get
+wired together for the first time — likely via small `app/` services (e.g. `RegisterUser`,
+`LoginUser`) that orchestrate them, per the hexagonal layering in `phase-2-plan.md` §4. Then
+`#24` (Client auth UI).
