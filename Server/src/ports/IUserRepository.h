@@ -31,6 +31,16 @@ public:
     // Case-insensitive lookup (mirrors citext). Returns std::nullopt if no
     // user has that email.
     virtual std::optional<domain::User> findByEmail(const std::string& email) = 0;
+
+    // Looks up a user by id (e.g. from an authenticated JWT's subject
+    // claim). Returns std::nullopt if no user has that id.
+    virtual std::optional<domain::User> findById(long long id) = 0;
+
+    // Overwrites the stored fields of an existing user (matched by
+    // user.id) -- e.g. a new password_hash after ChangePassword. Unlike
+    // save(), this never assigns an id or checks for duplicates; the caller
+    // is expected to have gotten `user` from find*() first.
+    virtual void update(const domain::User& user) = 0;
 };
 
 }  // namespace fitapp::ports

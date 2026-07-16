@@ -68,3 +68,42 @@ TEST(InMemoryUserRepositoryTest, Save_AssignsDistinctIncrementingIds) {
     const User savedB = repo.save(b);
     EXPECT_NE(savedA.id, savedB.id);
 }
+
+// Slice 1 (#18): ChangePassword needs to look up the authenticated user by
+// id (from the JWT's subject claim), not by email.
+TEST(InMemoryUserRepositoryTest, FindById_ReturnsUser) {
+    InMemoryUserRepository repo;
+    User user;
+    user.email = "frank@example.com";
+    user.displayName = "Frank";
+    const User saved = repo.save(user);
+
+    const auto found = repo.findById(saved.id);
+    ASSERT_TRUE(found.has_value());
+    EXPECT_EQ(found->email, "frank@example.com");
+    EXPECT_EQ(found->displayName, "Frank");
+}
+
+TEST(InMemoryUserRepositoryTest, FindById_UnknownId_ReturnsNullopt) {
+    InMemoryUserRepository repo;
+    EXPECT_FALSE(repo.findById(999).has_value());
+}
+
+// Slice 1 (#18): ChangePassword persists a new password_hash via update().
+TEST(InMemoryUserRepositoryTest, Update_ChangesStoredFields) {
+    InMemoryUserRepository repo;
+    User user;
+    user.email = "grace@example.com";
+    user.passwordHash = "old-hash";
+    const User saved = repo.save(user);
+
+    User modified = saved;
+    modified.passwordHash = "new-hash";
+    repo.update(modified);
+
+    const auto found = repo.findById(saved.id);
+    ASSERT_TRUE(found.has_value());
+    EXPECT_EQ(found->passwordHash, "new-hash");
+    // findByEmail must reflect the update too, not just findById.
+    EXPECT_EQ(repo.findByEmail("grace@example.com")->passwordHash, "new-hash");
+}

@@ -2,6 +2,19 @@
 
 namespace fitapp::db {
 
+namespace {
+
+fitapp::domain::User rowToUser(const pqxx::row& row) {
+    fitapp::domain::User user;
+    user.id = row["id"].as<long long>();
+    user.email = row["email"].as<std::string>();
+    user.passwordHash = row["password_hash"].as<std::string>();
+    user.displayName = row["display_name"].is_null() ? "" : row["display_name"].as<std::string>();
+    return user;
+}
+
+}  // namespace
+
 fitapp::domain::User PgUserRepository::save(const fitapp::domain::User& user) {
     try {
         const auto result = tx_.exec(
@@ -25,14 +38,25 @@ std::optional<fitapp::domain::User> PgUserRepository::findByEmail(const std::str
         "SELECT id, email, password_hash, display_name FROM users WHERE email = $1",
         pqxx::params{email});
     if (result.empty()) return std::nullopt;
+    return rowToUser(result[0]);
+}
 
-    const auto& row = result[0];
-    fitapp::domain::User user;
-    user.id = row["id"].as<long long>();
-    user.email = row["email"].as<std::string>();
-    user.passwordHash = row["password_hash"].as<std::string>();
-    user.displayName = row["display_name"].is_null() ? "" : row["display_name"].as<std::string>();
-    return user;
+std::optional<fitapp::domain::User> PgUserRepository::findById(long long id) {
+    const auto result = tx_.exec(
+        "SELECT id, email, password_hash, display_name FROM users WHERE id = $1",
+        pqxx::params{id});
+    if (result.empty()) return std::nullopt;
+    return rowToUser(result[0]);
+}
+
+void PgUserRepository::update(const fitapp::domain::User& user) {
+    try {
+        tx_.exec(
+            "UPDATE users SET email = $1, password_hash = $2, display_name = $3 WHERE id = $4",
+            pqxx::params{user.email, user.passwordHash, user.displayName, user.id});
+    } catch (const pqxx::unique_violation&) {
+        throw fitapp::ports::DuplicateEmailError(user.email);
+    }
 }
 
 }  // namespace fitapp::db

@@ -32,6 +32,32 @@ public:
         return it->second;
     }
 
+    std::optional<fitapp::domain::User> findById(long long id) override {
+        // No secondary index by id -- a linear scan is fine for a test
+        // fake's tiny datasets. Correctness over cleverness here.
+        for (const auto& [key, user] : byEmail_) {
+            if (user.id == id) return user;
+        }
+        return std::nullopt;
+    }
+
+    void update(const fitapp::domain::User& user) override {
+        for (auto it = byEmail_.begin(); it != byEmail_.end(); ++it) {
+            if (it->second.id != user.id) continue;
+
+            const std::string newKey = toLower(user.email);
+            if (newKey == it->first) {
+                it->second = user;
+            } else {
+                // Email changed -- the map is keyed by (lowercased) email,
+                // so the entry has to move.
+                byEmail_.erase(it);
+                byEmail_.emplace(newKey, user);
+            }
+            return;
+        }
+    }
+
 private:
     static std::string toLower(const std::string& s) {
         std::string out = s;

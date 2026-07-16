@@ -19,6 +19,8 @@ public:
 
     fitapp::domain::User save(const fitapp::domain::User& user) override;
     std::optional<fitapp::domain::User> findByEmail(const std::string& email) override;
+    std::optional<fitapp::domain::User> findById(long long id) override;
+    void update(const fitapp::domain::User& user) override;
 
 private:
     pqxx::work& tx_;

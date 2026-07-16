@@ -86,3 +86,47 @@ TEST_F(DbTest, PgUserRepository_Save_AssignsDistinctIncrementingIds) {
     const User savedB = repo.save(b);
     EXPECT_NE(savedA.id, savedB.id);
 }
+
+// Slice 1 (#18): ChangePassword needs to look up the authenticated user by
+// id (from the JWT's subject claim), not by email.
+TEST_F(DbTest, PgUserRepository_FindById_ReturnsUser) {
+    if (!available()) GTEST_SKIP() << "no test database reachable";
+
+    PgUserRepository repo(tx());
+    User user;
+    user.email = "pg-frank@example.com";
+    user.passwordHash = "hashed";
+    user.displayName = "Frank";
+    const User saved = repo.save(user);
+
+    const auto found = repo.findById(saved.id);
+    ASSERT_TRUE(found.has_value());
+    EXPECT_EQ(found->email, "pg-frank@example.com");
+    EXPECT_EQ(found->displayName, "Frank");
+}
+
+TEST_F(DbTest, PgUserRepository_FindById_UnknownId_ReturnsNullopt) {
+    if (!available()) GTEST_SKIP() << "no test database reachable";
+
+    PgUserRepository repo(tx());
+    EXPECT_FALSE(repo.findById(999999999).has_value());
+}
+
+// Slice 1 (#18): ChangePassword persists a new password_hash via update().
+TEST_F(DbTest, PgUserRepository_Update_ChangesStoredFields) {
+    if (!available()) GTEST_SKIP() << "no test database reachable";
+
+    PgUserRepository repo(tx());
+    User user;
+    user.email = "pg-grace@example.com";
+    user.passwordHash = "old-hash";
+    const User saved = repo.save(user);
+
+    User modified = saved;
+    modified.passwordHash = "new-hash";
+    repo.update(modified);
+
+    const auto found = repo.findById(saved.id);
+    ASSERT_TRUE(found.has_value());
+    EXPECT_EQ(found->passwordHash, "new-hash");
+}

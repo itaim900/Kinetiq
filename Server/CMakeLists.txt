@@ -99,6 +99,7 @@ if(FITAPP_BUILD_TESTS)
         tests/test_authenticator.cpp
         tests/test_register_user.cpp
         tests/test_login_user.cpp
+        tests/test_change_password.cpp
         tests/support/TestDb.cpp
         src/adapters/db/Migrator.cpp
         src/adapters/db/PgUserRepository.cpp

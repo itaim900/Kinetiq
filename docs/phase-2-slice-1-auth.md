@@ -25,6 +25,9 @@ the slice progresses, don't wait until it's done.
   2026-07-12. **#17 complete.**
 - [x] `app::RegisterUser` service (happy path, weak password, duplicate email) — 2026-07-16.
 - [x] `app::LoginUser` service (happy path, wrong password, unknown email) — 2026-07-16.
+- [x] `IUserRepository` extended with `findById` + `update` (fake + `PgUserRepository`) — 2026-07-16.
+- [x] `app::ChangePassword` service (happy path, wrong current password, weak new password) —
+  2026-07-16.
 - [ ] `POST /auth/register` (handler + DTOs + HTTP tests) — #18
 - [ ] `POST /auth/login` (handler + DTOs + HTTP tests) — #18
 - [ ] `GET /auth/me` (handler + HTTP tests) — #18
@@ -102,6 +105,14 @@ was considered and explicitly **deferred** — this app isn't a high-value targe
 timing channel needs many precise measurements for a low-value payoff here. Documented in
 `02-api-contract.md` under `POST /auth/login` as a deliberate gap, not an oversight; revisit if
 the threat model ever changes.
+
+### 2026-07-16 — Fake password hasher: still deferred
+After `ChangePassword`, the full suite reached 54/54 in ~22s (up from single digits earlier in the
+slice), entirely from real argon2 calls compounding across `RegisterUser`/`LoginUser`/
+`ChangePassword` tests plus their seed-user setup. Raised the fake-hasher question flagged back in
+Step 6. **Kept the real hasher for now** — 22s isn't painful yet, and the upcoming HTTP layer is a
+smaller, more bounded set of tests (4 endpoints) than the open-ended service-layer work just
+finished. Revisit if HTTP-layer tests push this meaningfully higher.
 
 ---
 
@@ -281,6 +292,41 @@ cohesive operation here, so happy path + the failure case were built together as
    add a dummy-hash `verify()` call — documented as a deliberate v1 limitation in
    `02-api-contract.md` and the decision log above, not a bug.
 
+### Step 12 — Extend `IUserRepository`: `findById` + `update` (2026-07-16, TDD loop 11)
+`ChangePassword` needs to look up the authenticated user by id (from the JWT subject, not their
+email) and persist a new password hash for an *existing* user -- neither operation existed on the
+port yet (`save()` is create-only). Touches "finished" `#16` files again, which is normal: ports
+grow as new use cases demand it.
+
+1. Added 3 cases each to `test_user_repository.cpp` (fake) and `test_pg_user_repository.cpp`
+   (real, `DbTest`-based): `findById` returns the user, `findById` on an unknown id returns
+   `nullopt`, `update` changes the stored fields (and `findByEmail` reflects the change too, not
+   just `findById` -- proving the fake's dual-lookup stays consistent after a mutation).
+2. Built — **red**: `'class fitapp::db::PgUserRepository' has no member named 'findById'`.
+3. Added `findById`/`update` to `ports/IUserRepository.h`. Implemented in
+   `InMemoryUserRepository` (linear scan by id -- fine for a fake's tiny datasets; `update()`
+   re-keys the map if the email changed, matching what a real `UPDATE` would do even though no
+   current caller changes email) and `PgUserRepository` (`SELECT ... WHERE id = $1`,
+   `UPDATE ... WHERE id = $4`, same `pqxx::unique_violation` → `DuplicateEmailError` translation
+   as `save()`). Factored the row→`User` mapping into a local `rowToUser()` helper to avoid
+   duplicating it between `findByEmail` and the new `findById`.
+4. Built + ran — **green**, 16/16 (8 fake + 8 real) on the first attempt.
+
+### Step 13 — `app::ChangePassword` (2026-07-16, TDD loop 12)
+1. Wrote `Server/tests/test_change_password.cpp`: correct current password updates the hash (new
+   password verifies, old one no longer does); wrong current password throws
+   `InvalidCredentialsError` (reused from `LoginUser.h` rather than a new near-duplicate type --
+   same meaning, same principle) and leaves the password unchanged; weak new password throws
+   `WeakPasswordError` and also leaves the password unchanged.
+2. Built — **red**: `fatal error: app/ChangePassword.h: No such file or directory`.
+3. Wrote `Server/src/app/ChangePassword.h`: same guard-clause ordering as `RegisterUser` --
+   `requireStrongPassword(newPassword)` runs before `findById` or `hasher_.verify()`. Combines
+   "user not found" (defensive; shouldn't happen for an authenticated request, but handled the
+   same way regardless) and "wrong current password" into the identical `InvalidCredentialsError`.
+4. Built + ran — **green**, 3/3 on the first attempt. Full suite: **54/54**.
+
+All three `app/` services for #18 are now done (`RegisterUser`, `LoginUser`, `ChangePassword`).
+
 ---
 
 ## Files touched so far
@@ -310,12 +356,21 @@ cohesive operation here, so happy path + the failure case were built together as
 | `Server/src/domain/PasswordPolicy.h` | + `WeakPasswordError`, `requireStrongPassword()` |
 | `Server/src/app/LoginUser.h` | Find user, verify password, issue token; `InvalidCredentialsError` |
 | `Server/tests/test_login_user.cpp` | 3 tests (happy path, wrong password, unknown email) |
+| `Server/src/ports/IUserRepository.h` | + `findById`, `update` |
+| `Server/tests/support/InMemoryUserRepository.h` | + `findById`, `update` |
+| `Server/src/adapters/db/PgUserRepository.h/.cpp` | + `findById`, `update`, `rowToUser()` helper |
+| `Server/tests/test_user_repository.cpp` | + 3 tests |
+| `Server/tests/test_pg_user_repository.cpp` | + 3 tests |
+| `Server/src/app/ChangePassword.h` | Change password while authenticated |
+| `Server/tests/test_change_password.cpp` | 3 tests (happy path, wrong current, weak new) |
 
 ---
 
 ## What's next
 
-`#16` and `#17` are complete. `#18` is underway, going slowly by design: `RegisterUser` and
-`LoginUser` are both fully done (6 tests between them). Next: `ChangePassword`, then DTOs + HTTP
-handlers + `HttpClient` tests for all four endpoints, then wiring into `main.cpp`. Then `#24`
-(Client auth UI).
+`#16` and `#17` are complete. `#18`'s three `app/` services (`RegisterUser`, `LoginUser`,
+`ChangePassword`) are all done and fully tested (54/54 suite-wide). Next: DTOs (`http/dto/`) +
+HTTP handlers (`http/controllers/`) + `HttpClient` tests for all four endpoints (register, login,
+me, change-password), then wiring into `main.cpp` -- the composition root, where
+`PgUserRepository`, `Argon2PasswordHasher`, and `JwtTokenService` finally get constructed for real
+and handed to these services. Then `#24` (Client auth UI).
