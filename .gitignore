@@ -23,6 +23,9 @@ dist/
 coverage/
 *.local
 
+# ---- Browser automation artifacts (Playwright MCP screenshots/snapshots) ----
+.playwright-mcp/
+
 # ---- Environment / secrets ----
 .env
 .env.*

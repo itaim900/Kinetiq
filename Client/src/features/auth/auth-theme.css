@@ -1,0 +1,261 @@
+/* "Momentum" — the auth screen's background treatment.
+   Deep charcoal ground, one coral accent, a soft radial glow that breathes
+   slowly behind the card (like a resting heart rate, not a strobe).
+   Scoped to .auth-backdrop so it never leaks into the authenticated view. */
+
+.auth-backdrop {
+  --auth-bg: #14161a;
+  --auth-bg-2: #1b1e23;
+  --auth-accent: #ff6a4d;
+  --auth-accent-dim: #c94f38;
+  --auth-ink: #f1efec;
+  --auth-muted: #a8a29b;
+  --auth-line: rgba(241, 239, 236, 0.1);
+  --auth-surface: rgba(255, 255, 255, 0.045);
+
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.25rem;
+  position: relative;
+  /* overflow-x only: contains the glow blobs' horizontal blur bleed without
+     clipping real content vertically on short viewports -- overflow:hidden
+     here made the lower auth-links unreachable when the card was taller
+     than the viewport (caught by Playwright's actionability check, not a
+     cosmetic issue). */
+  overflow-x: hidden;
+  background: radial-gradient(circle at 50% 40%, var(--auth-bg-2), var(--auth-bg) 70%);
+  color: var(--auth-ink);
+  font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.auth-backdrop::before,
+.auth-backdrop::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(60px);
+}
+
+.auth-backdrop::before {
+  width: 46vw;
+  height: 46vw;
+  max-width: 620px;
+  max-height: 620px;
+  left: 50%;
+  top: 42%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, var(--auth-accent) 0%, transparent 68%);
+  opacity: 0.28;
+  animation: auth-pulse 7s ease-in-out infinite;
+}
+
+.auth-backdrop::after {
+  width: 28vw;
+  height: 28vw;
+  max-width: 380px;
+  max-height: 380px;
+  left: 18%;
+  top: 70%;
+  background: radial-gradient(circle, var(--auth-accent-dim) 0%, transparent 70%);
+  opacity: 0.16;
+  animation: auth-pulse 9s ease-in-out infinite -3s;
+}
+
+@keyframes auth-pulse {
+  0%,
+  100% {
+    opacity: 0.16;
+    transform: translate(-50%, -50%) scale(0.94);
+  }
+  50% {
+    opacity: 0.32;
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+}
+
+.auth-backdrop::after {
+  /* Second blob isn't centered via transform like the first -- give it its
+     own keyframes so it doesn't inherit the translate(-50%, -50%). */
+  animation-name: auth-pulse-secondary;
+}
+
+@keyframes auth-pulse-secondary {
+  0%,
+  100% {
+    opacity: 0.1;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 0.22;
+    transform: scale(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-backdrop::before,
+  .auth-backdrop::after {
+    animation: none;
+    opacity: 0.2;
+  }
+}
+
+.auth-card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 400px;
+  background: var(--auth-surface);
+  border: 1px solid var(--auth-line);
+  border-radius: 16px;
+  padding: 2.25rem 2rem;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+.auth-card h1 {
+  margin: 0 0 0.3rem;
+  font-size: 1.7rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+.auth-card .auth-tagline {
+  margin: 0 0 1.75rem;
+  color: var(--auth-muted);
+  font-size: 0.9rem;
+}
+
+.auth-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.auth-card label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--auth-muted);
+  margin-bottom: 0.4rem;
+}
+
+.auth-card input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.7rem 0.85rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--auth-line);
+  border-radius: 8px;
+  color: var(--auth-ink);
+  font-size: 0.95rem;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.auth-card input::placeholder {
+  color: rgba(241, 239, 236, 0.35);
+}
+
+.auth-card input:focus-visible {
+  outline: none;
+  border-color: var(--auth-accent);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.auth-card button[type="submit"] {
+  margin-top: 0.35rem;
+  padding: 0.8rem 1rem;
+  border: none;
+  border-radius: 8px;
+  background: var(--auth-accent);
+  color: #1a0d08;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.05s ease;
+}
+
+.auth-card button[type="submit"]:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.auth-card button[type="submit"]:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.auth-card button[type="submit"]:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.auth-card button[type="submit"]:focus-visible {
+  outline: 2px solid var(--auth-accent);
+  outline-offset: 2px;
+}
+
+.auth-card [role="alert"] {
+  margin: 0;
+  padding: 0.65rem 0.8rem;
+  background: rgba(255, 106, 77, 0.12);
+  border: 1px solid rgba(255, 106, 77, 0.35);
+  border-radius: 8px;
+  color: #ffb3a1;
+  font-size: 0.85rem;
+}
+
+.auth-card .auth-links {
+  margin-top: 1.35rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--auth-line);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  color: var(--auth-muted);
+}
+
+.auth-card .auth-links button {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--auth-accent);
+  font-size: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.auth-card .auth-links button:focus-visible {
+  outline: 2px solid var(--auth-accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+.auth-card .auth-notice {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--auth-muted);
+}
+
+.auth-health-badge {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.5rem;
+  z-index: 1;
+  font-size: 0.72rem;
+  color: var(--auth-muted);
+  display: flex;
+  gap: 0.6rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.auth-health-badge strong {
+  color: var(--auth-ink);
+  font-weight: 600;
+}

@@ -1,6 +1,6 @@
 # Phase 2, Slice 1 — Auth: Step-by-Step Build Log
 
-**Status:** 🟡 IN PROGRESS (started 2026-07-12) — `#16`, `#17`, `#18` complete; `#24` (Client) remains
+**Status:** ✅ COMPLETE (started 2026-07-12, finished 2026-07-16) — `#16`, `#17`, `#18`, `#24` all done
 **Issues:** #16, #17, #18, #24 (see `phase-2-plan.md` §5, §9)
 **Contract:** `02-api-contract.md` (Auth section) — the source of truth for exact request/response
 shapes and test cases; this doc is the narrative of *how* and *in what order* we got there.
@@ -35,7 +35,12 @@ the slice progresses, don't wait until it's done.
 - [x] `AutoCommitPgUserRepository` (production repository wrapper) — 2026-07-16
 - [x] Wired into `main.cpp` + live-verified against the real server/DB — 2026-07-16. **#18
   complete.**
-- [ ] Client: register/login forms, token storage, authed fetch — #24
+- [x] Client: `RegisterForm`, `LoginForm`, `AuthPage` (toggle + forgot-password placeholder),
+  `App.tsx` session restoration + logout, `localStorage` token persistence — 2026-07-16, all
+  TDD'd (Vitest + Testing Library + MSW), live-verified via browser automation against the real
+  server/DB. **#24 complete — Slice 1 is fully done.**
+- [x] Login screen visual design ("Momentum" direction: dark ground, coral accent, breathing
+  radial glow) — 2026-07-16.
 
 ---
 
@@ -133,6 +138,21 @@ from, this codebase's existing convention. **Known, accepted limitation:** multi
 both calls. The only way to observe this is a narrow, low-severity race (the same user firing two
 concurrent requests); properly closing it would mean threading a transaction through Crow's
 request lifecycle, which nothing in this codebase does yet. Not worth the complexity for v1.
+
+### 2026-07-16 — Forgot password: visual-only placeholder
+No backend exists (deferred 2026-07-12, no email infra). The Client UI shows a real "Forgot
+password?" link styled like the rest of the auth screen, but clicking it just reveals a "Password
+reset is coming soon" message rather than a dead-end form with nowhere to submit. Avoids looking
+broken while still giving the visual design work a real surface to land on.
+
+### 2026-07-16 — Token storage: `localStorage`, not in-memory-only
+`phase-2-plan.md`'s original placeholder note said "in-memory token handling," written before the
+24h JWT expiry existed. In-memory-only would mean the token doesn't survive a page refresh, which
+quietly defeats the point of a 24h expiry (chosen for "log in once a day" convenience). Chose
+`localStorage` instead — it persists across refreshes and browser restarts, which is what a 24h
+token is actually for. XSS risk is a real but accepted trade-off, consistent with this app's
+already-established "not a high-value target" reasoning (same reasoning behind accepting the
+login timing side-channel).
 
 ---
 
@@ -410,6 +430,50 @@ the manually-created test user from the dev database afterward, then stopped the
 
 **`#18` is now complete.** Full suite: **70/70**.
 
+### Step 17 — Client auth UI (2026-07-16, TDD loops 17-21)
+First frontend work of the slice. Mirrored the backend's red-then-green rhythm onto Vitest +
+Testing Library + MSW: `api.ts` (`registerUser`/`loginUser`/`fetchMe`, shared `postJson` helper,
+parses the backend's RFC 9457 `detail` field for error messages) → `lib/tokenStorage.ts`
+(`localStorage`, per the decision above) → `RegisterForm` → `LoginForm` → `AuthPage` (mode toggle
++ forgot-password placeholder) → `App.tsx` (session restoration via `GET /auth/me` on load,
+logout). Each layer red (module/import resolution failure, the frontend's version of the
+CMake-level red seen back in Step 5) before green. Forms report results to their parent via an
+`onSuccess` callback rather than touching storage themselves — the same separation of concerns as
+the backend's services not handling HTTP concerns.
+
+22 new tests, all green. Full suite (backend + frontend together, counted separately per
+toolchain): Server **70/70**, Client **22/22**. Caught one real bug during a `RegisterForm` test
+via `screen.getByText(/ivy/i)` matching both "Ivy" and "ivy@example.com" — a test-authoring bug,
+not an app bug, fixed by matching the exact string instead of a loose regex.
+
+**Live-verified via browser automation** (not just `npm test`) against the real server and
+database: register → session persists across a full page reload → logout → wrong password shows
+the correct error → login → logout → forgot-password placeholder. Cleaned up the manually-created
+test user afterward.
+
+### Step 18 — Login screen visual design: "Momentum" (2026-07-16)
+Sketched three directions with concrete palettes/motion before building anything (per the owner's
+request to see options first): an energetic/athletic dark-and-coral direction, a calm minimal
+paper-toned direction, and a technical direction reusing the HLD doc's teal/schematic language.
+Chose **Momentum**: near-black ground (`#14161a`), one coral accent (`#ff6a4d` — picked over
+cobalt specifically to stay visually distinct from the HLD doc's cooler teal), a soft radial glow
+behind the card that "breathes" on a slow ~7-9s cycle via CSS `@keyframes` (two blobs, offset
+timing so they don't pulse in sync), `prefers-reduced-motion` support to freeze it.
+
+Scoped as `src/features/auth/auth-theme.css`, targeting the forms' existing semantic markup
+(`label`, `input`, `button[type=submit]`, `[role=alert]`) rather than changing the components
+themselves — `RegisterForm`/`LoginForm` stayed presentation-agnostic. `AuthPage`'s wrapper markup
+gained an `.auth-links` class to group the toggle/forgot-password links for consistent spacing.
+
+**Caught a real bug via Playwright's actionability checks, not visual inspection:** `overflow:
+hidden` on the backdrop (added to contain the blurred glow blobs) also clipped real content —
+on a short viewport, the "Create one" link became genuinely unreachable, not just requiring
+scroll. Playwright's click refused to proceed ("waiting for element to be visible... stable")
+where a manual glance at a tall viewport wouldn't have caught it. Fixed by scoping to
+`overflow-x: hidden` only. Re-verified the fix at a short viewport (650px) — link reachable again.
+
+**Slice 1 (Auth) is now fully complete** — `#16`, `#17`, `#18`, `#24` all done.
+
 ---
 
 ## Files touched so far
@@ -452,13 +516,26 @@ the manually-created test user from the dev database afterward, then stopped the
 | `Server/src/adapters/db/AutoCommitPgUserRepository.h/.cpp` | Production repo: connection-per-call |
 | `Server/tests/test_auto_commit_pg_user_repository.cpp` | 2 tests (manual cleanup, not `DbTest`) |
 | `Server/src/main.cpp` | Wired `JWT_SECRET`, real adapters, `registerAuthRoutes` — composition root |
+| `Client/src/api.ts` | + `registerUser`, `loginUser`, `fetchMe`; shared `postJson` + error-parsing helper |
+| `Client/src/api.auth.test.ts` | 5 tests |
+| `Client/src/lib/tokenStorage.ts` | `localStorage`-backed save/get/clear |
+| `Client/src/lib/tokenStorage.test.ts` | 3 tests |
+| `Client/src/features/auth/RegisterForm.tsx` + `.test.tsx` | 3 tests |
+| `Client/src/features/auth/LoginForm.tsx` + `.test.tsx` | 2 tests |
+| `Client/src/features/auth/AuthPage.tsx` + `.test.tsx` | Mode toggle + forgot-password placeholder; 4 tests |
+| `Client/src/features/auth/auth-theme.css` | "Momentum" visual design (coral accent, breathing glow) |
+| `Client/src/App.tsx` | Session restoration, logout, momentum backdrop for the unauthenticated view |
+| `Client/src/App.test.tsx` | +4 tests (5 total) |
+| `Client/src/mocks/handlers.ts` | + default register/login MSW handlers |
 
 ---
 
 ## What's next
 
-`#16`, `#17`, and `#18` are all complete — the whole backend of Slice 1 (Auth) is built, tested
-(70/70), and live-verified against the real server and database. Only **`#24` (Client auth UI)**
-remains: register/login forms, storing the token, and an authenticated `fetch` wrapper so future
-protected endpoints (Slice 2+) can attach the token automatically. That's React/TypeScript work,
-a different stack from everything built so far in this doc.
+**Slice 1 (Auth) is fully complete** — `#16`, `#17`, `#18`, `#24` all built, tested (Server
+70/70, Client 22/22), and live-verified against the real server and database, including the
+browser UI. Next up is **Slice 2 — Profile & Injuries** (`#19` `GET`/`PATCH /users/me`, `#20`
+injuries CRUD, `#25` FE forms with React Hook Form + Zod) — see `docs/phase-2-plan.md`. One
+carry-over from this slice worth remembering when Slice 2 builds its own repository: reuse the
+`AutoCommitPgUserRepository` pattern (connection-per-call) for any new repository used directly
+from `main.cpp`'s routes, not a single shared long-lived transaction.

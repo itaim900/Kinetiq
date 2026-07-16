@@ -10,6 +10,29 @@ For durable/architectural facts, also update `docs/CONTEXT.md` (and add an ADR w
 
 ---
 
+## 2026-07-16 — VS Code (2)
+- **Finished `#24` — Slice 1 (Auth) is now fully complete** (`#16`, `#17`, `#18`, `#24` all done).
+  Built the Client auth UI, mirroring the backend's TDD rhythm onto Vitest + Testing Library +
+  MSW: `api.ts` (register/login/me calls), `lib/tokenStorage.ts`, `RegisterForm`, `LoginForm`,
+  `AuthPage` (mode toggle + forgot-password placeholder), `App.tsx` (session restoration on load
+  via `GET /auth/me`, logout). 22 new tests, all green.
+- Two decisions worth remembering: **`localStorage`** for the token, not in-memory-only — the
+  original `phase-2-plan.md` note predated the 24h JWT expiry decision, and in-memory storage
+  would've quietly defeated the point of that expiry (token wouldn't survive a page refresh).
+  **Forgot password** is a visual-only placeholder ("coming soon") since no backend exists yet —
+  avoids a dead-end form without pretending the feature is real.
+- Designed the login screen's background together: sketched 3 directions (energetic/athletic,
+  calm/minimal, technical/schematic) with concrete palettes before building; picked "Momentum" —
+  near-black ground, one coral accent, a soft radial glow that breathes slowly behind the card.
+  Caught a real bug via Playwright's actionability checks (not visual inspection): `overflow:
+  hidden` on the backdrop, added to contain the glow's blur, also clipped real content on short
+  viewports, making a link genuinely unreachable. Fixed by scoping to `overflow-x: hidden`.
+- **Live-verified via browser automation** against the real server and database, not just
+  `npm test`: register → session persists across a full page reload → logout → wrong-password
+  error → login → logout → forgot-password placeholder. Test user cleaned up afterward.
+- Full narrative (2 more steps, 18 total) in `docs/phase-2-slice-1-auth.md`. Next: **Slice 2 —
+  Profile & Injuries** (`#19`, `#20`, `#25`).
+
 ## 2026-07-16 — VS Code
 - **Finished `#18` — Slice 1's entire backend is now done** (`#16`, `#17`, `#18` all complete;
   only `#24` Client auth remains). Built, TDD'd throughout, red-then-green on nearly every loop:
