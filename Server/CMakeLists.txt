@@ -62,8 +62,11 @@ endfunction()
 add_executable(fitapp_server
     src/main.cpp
     src/adapters/db/Migrator.cpp
+    src/adapters/db/PgUserRepository.cpp
+    src/adapters/db/AutoCommitPgUserRepository.cpp
     src/adapters/crypto/Argon2PasswordHasher.cpp
-    src/adapters/crypto/JwtTokenService.cpp)
+    src/adapters/crypto/JwtTokenService.cpp
+    src/http/controllers/AuthController.cpp)
 target_include_directories(fitapp_server PRIVATE
     src
     ${CMAKE_SOURCE_DIR}/third_party/crow)
@@ -100,11 +103,15 @@ if(FITAPP_BUILD_TESTS)
         tests/test_register_user.cpp
         tests/test_login_user.cpp
         tests/test_change_password.cpp
+        tests/test_auth_controller.cpp
+        tests/test_auto_commit_pg_user_repository.cpp
         tests/support/TestDb.cpp
         src/adapters/db/Migrator.cpp
         src/adapters/db/PgUserRepository.cpp
+        src/adapters/db/AutoCommitPgUserRepository.cpp
         src/adapters/crypto/Argon2PasswordHasher.cpp
-        src/adapters/crypto/JwtTokenService.cpp)
+        src/adapters/crypto/JwtTokenService.cpp
+        src/http/controllers/AuthController.cpp)
     target_include_directories(fitapp_tests PRIVATE
         src tests
         ${CMAKE_SOURCE_DIR}/third_party/crow)  # Crow for the in-process HTTP harness

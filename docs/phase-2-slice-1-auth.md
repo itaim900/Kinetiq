@@ -1,6 +1,6 @@
 # Phase 2, Slice 1 — Auth: Step-by-Step Build Log
 
-**Status:** 🟡 IN PROGRESS (started 2026-07-12)
+**Status:** 🟡 IN PROGRESS (started 2026-07-12) — `#16`, `#17`, `#18` complete; `#24` (Client) remains
 **Issues:** #16, #17, #18, #24 (see `phase-2-plan.md` §5, §9)
 **Contract:** `02-api-contract.md` (Auth section) — the source of truth for exact request/response
 shapes and test cases; this doc is the narrative of *how* and *in what order* we got there.
@@ -28,10 +28,13 @@ the slice progresses, don't wait until it's done.
 - [x] `IUserRepository` extended with `findById` + `update` (fake + `PgUserRepository`) — 2026-07-16.
 - [x] `app::ChangePassword` service (happy path, wrong current password, weak new password) —
   2026-07-16.
-- [ ] `POST /auth/register` (handler + DTOs + HTTP tests) — #18
-- [ ] `POST /auth/login` (handler + DTOs + HTTP tests) — #18
-- [ ] `GET /auth/me` (handler + HTTP tests) — #18
-- [ ] `PATCH /auth/password` (handler + HTTP tests) — #18 (added to scope 2026-07-12)
+- [x] `POST /auth/register` (DTOs + handler + HTTP tests) — 2026-07-16
+- [x] `POST /auth/login` (handler + HTTP tests) — 2026-07-16
+- [x] `GET /auth/me` (handler + HTTP tests) — 2026-07-16
+- [x] `PATCH /auth/password` (handler + HTTP tests) — 2026-07-16
+- [x] `AutoCommitPgUserRepository` (production repository wrapper) — 2026-07-16
+- [x] Wired into `main.cpp` + live-verified against the real server/DB — 2026-07-16. **#18
+  complete.**
 - [ ] Client: register/login forms, token storage, authed fetch — #24
 
 ---
@@ -113,6 +116,23 @@ slice), entirely from real argon2 calls compounding across `RegisterUser`/`Login
 Step 6. **Kept the real hasher for now** — 22s isn't painful yet, and the upcoming HTTP layer is a
 smaller, more bounded set of tests (4 endpoints) than the open-ended service-layer work just
 finished. Revisit if HTTP-layer tests push this meaningfully higher.
+
+### 2026-07-16 — Production repository needs its own class: `AutoCommitPgUserRepository`
+Discovered while wiring `main.cpp`, not anticipated earlier: `registerAuthRoutes(app, users,
+hasher, tokens)` is called *once* at server startup and captures its dependencies by reference for
+the server's entire lifetime (every test already relies on this). But `PgUserRepository` needs a
+`pqxx::work&` — a transaction — which is inherently per-operation and unsafe to share across the
+concurrent requests a multithreaded Crow server handles. `Argon2PasswordHasher` and
+`JwtTokenService` have no such problem (no per-request state), so only the repository needed a
+fix. Added `AutoCommitPgUserRepository`: opens a fresh connection + transaction for every single
+call, delegates to `PgUserRepository`, commits — "auto-commit" in the classic DB sense. This
+mirrors a pattern already in `main.cpp`'s health-check handler (opens its own fresh
+`pqxx::connection` per request rather than sharing one), so it's consistent with, not a departure
+from, this codebase's existing convention. **Known, accepted limitation:** multi-step use cases
+(e.g. `ChangePassword`'s `findById()` then `update()`) do not get one atomic transaction across
+both calls. The only way to observe this is a narrow, low-severity race (the same user firing two
+concurrent requests); properly closing it would mean threading a transaction through Crow's
+request lifecycle, which nothing in this codebase does yet. Not worth the complexity for v1.
 
 ---
 
@@ -327,6 +347,69 @@ grow as new use cases demand it.
 
 All three `app/` services for #18 are now done (`RegisterUser`, `LoginUser`, `ChangePassword`).
 
+### Step 14 — First DTOs + `POST /auth/register` HTTP layer (2026-07-16, TDD loop 13)
+The first `http/dto/` and `http/controllers/` files in the codebase. Also the first place actual
+Crow JSON-parsing API gets used (only response-*building* existed before, in `main.cpp`'s health
+check) — verified `crow::json::load`'s exact `rvalue` API (`operator[]`, `.s()`, `.has()`,
+`explicit operator bool()`) directly in the vendored header before writing anything, same
+discipline as verifying the argon2 C API back in Step 6.
+
+1. Wrote `Server/tests/test_auth_controller.cpp`, one happy-path case, driving
+   `fitapp::http::registerAuthRoutes(app, users, hasher, tokens)` through `HttpClient` — a function
+   that didn't exist yet.
+2. Built — **red** (CMake-level, like Step 5: `add_executable` couldn't find
+   `AuthController.cpp`, which didn't exist at all yet).
+3. Wrote `Server/src/http/dto/AuthDto.h` (`parseRegisterRequest`, `userToJson` — deliberately
+   excludes `passwordHash`, `authResultToJson`) and
+   `Server/src/http/controllers/AuthController.{h,cpp}` (`registerAuthRoutes`, a free function
+   matching `Authenticator.h`'s pattern, not a class). Confirmed `crow::response(int, returnable&)`
+   exists in the vendored header before relying on `crow::response(201, json)`. Removed the
+   now-redundant `.gitkeep` files from both new folders.
+4. Built + ran — **green**, first attempt. First genuine end-to-end proof: HTTP request → Crow
+   routing → JSON parsing → `RegisterUser` → hasher/repo/tokens → JSON response, `password_hash`
+   confirmed absent from the wire.
+5. Added the 3 failure cases (weak password → 422, duplicate email → 409, missing field → 422).
+   Built — **red**: all three returned `500` (uncaught exceptions), exactly as expected. Added
+   `dto::errorResponse()` (a small RFC 9457-shaped helper) and a `try`/`catch` in the handler.
+   **Catch-order matters**: `WeakPasswordError` and `DuplicateEmailError` both derive from
+   `std::runtime_error`, so they must be caught *before* a general `catch (const std::exception&)`
+   fallback (which handles missing/malformed JSON fields) — reversing the order would let the
+   general catch swallow the specific ones first. Built + ran — **green**, 4/4.
+
+### Step 15 — `POST /auth/login`, `GET /auth/me`, `PATCH /auth/password` (2026-07-16, TDD loops 14-16)
+Same rhythm repeated three times, each red-then-green on the first implementation attempt:
+- **Login**: `parseLoginRequest` + a route catching `InvalidCredentialsError` → `401` (same message
+  for wrong password and unknown email, per the earlier no-enumeration decision). 3 tests.
+- **Me**: the first route to use `Authenticator::authenticate()` from `#17` for real. Missing/
+  invalid/expired token → `401` via the authenticator; a valid-but-now-nonexistent user (edge case,
+  defensive) also → `401`. Response is the bare user profile, not wrapped in a `user` key (unlike
+  register/login, which also return a token). 3 tests.
+- **Change password**: needs *both* the authenticator (for the user id) *and* `ChangePassword`.
+  Checks the token before parsing the body. 4 tests, including a full round-trip through `login`
+  itself (old password stops working, new one works) as part of the same test.
+
+Full suite after all HTTP routes: **68/68** (14 `AuthControllerTest` cases total).
+
+### Step 16 — Wire into `main.cpp` (2026-07-16)
+The composition root, for real. Needed `AutoCommitPgUserRepository` first (see the 2026-07-16
+decision above) since naively constructing one `PgUserRepository` at startup would have been
+unsafe. Added `JWT_SECRET` env var (dev fallback, but — unlike `DB_PASSWORD`'s silent fallback —
+logs a `CROW_LOG_WARNING` when the fallback is in use, since a guessable JWT secret lets anyone
+forge a valid login token for any user). Constructed `AutoCommitPgUserRepository`,
+`Argon2PasswordHasher`, `JwtTokenService(jwtSecret, std::chrono::hours(24))` as local variables in
+`main()`, called `registerAuthRoutes(app, users, hasher, tokens)` — safe because `app`, `users`,
+`hasher`, `tokens` all share `main()`'s stack frame and `app.run()` blocks for the server's entire
+lifetime, so the captured references never dangle.
+
+Built both `fitapp_server` and `fitapp_tests` clean. Then **live-verified manually** against the
+real running server and real Postgres (not just tests): started the server via
+`scripts/run-dev.ps1`, confirmed the `JWT_SECRET` warning fired, then `curl`'d the full flow —
+register → login (right + wrong password) → `/me` (with + without token) → change password →
+login with old password (`401`) → login with new password (`200`). Every step matched. Cleaned up
+the manually-created test user from the dev database afterward, then stopped the server.
+
+**`#18` is now complete.** Full suite: **70/70**.
+
 ---
 
 ## Files touched so far
@@ -363,14 +446,19 @@ All three `app/` services for #18 are now done (`RegisterUser`, `LoginUser`, `Ch
 | `Server/tests/test_pg_user_repository.cpp` | + 3 tests |
 | `Server/src/app/ChangePassword.h` | Change password while authenticated |
 | `Server/tests/test_change_password.cpp` | 3 tests (happy path, wrong current, weak new) |
+| `Server/src/http/dto/AuthDto.h` | Request parsing + response building for all 4 endpoints |
+| `Server/src/http/controllers/AuthController.h/.cpp` | `registerAuthRoutes` — all 4 routes |
+| `Server/tests/test_auth_controller.cpp` | 14 HTTP-level tests (`HttpClient`) |
+| `Server/src/adapters/db/AutoCommitPgUserRepository.h/.cpp` | Production repo: connection-per-call |
+| `Server/tests/test_auto_commit_pg_user_repository.cpp` | 2 tests (manual cleanup, not `DbTest`) |
+| `Server/src/main.cpp` | Wired `JWT_SECRET`, real adapters, `registerAuthRoutes` — composition root |
 
 ---
 
 ## What's next
 
-`#16` and `#17` are complete. `#18`'s three `app/` services (`RegisterUser`, `LoginUser`,
-`ChangePassword`) are all done and fully tested (54/54 suite-wide). Next: DTOs (`http/dto/`) +
-HTTP handlers (`http/controllers/`) + `HttpClient` tests for all four endpoints (register, login,
-me, change-password), then wiring into `main.cpp` -- the composition root, where
-`PgUserRepository`, `Argon2PasswordHasher`, and `JwtTokenService` finally get constructed for real
-and handed to these services. Then `#24` (Client auth UI).
+`#16`, `#17`, and `#18` are all complete — the whole backend of Slice 1 (Auth) is built, tested
+(70/70), and live-verified against the real server and database. Only **`#24` (Client auth UI)**
+remains: register/login forms, storing the token, and an authenticated `fetch` wrapper so future
+protected endpoints (Slice 2+) can attach the token automatically. That's React/TypeScript work,
+a different stack from everything built so far in this doc.

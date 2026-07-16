@@ -10,6 +10,29 @@ For durable/architectural facts, also update `docs/CONTEXT.md` (and add an ADR w
 
 ---
 
+## 2026-07-16 — VS Code
+- **Finished `#18` — Slice 1's entire backend is now done** (`#16`, `#17`, `#18` all complete;
+  only `#24` Client auth remains). Built, TDD'd throughout, red-then-green on nearly every loop:
+  `app/` services (`RegisterUser`, `LoginUser`, `ChangePassword`), extended `IUserRepository` with
+  `findById`/`update` (needed for `ChangePassword`, touching "finished" `#16` files again — normal
+  as ports grow), `http/dto/AuthDto.h` + `http/controllers/AuthController` (all 4 endpoints:
+  register/login/me/change-password), and a new production-only adapter
+  `AutoCommitPgUserRepository` (opens a fresh connection+transaction per call — discovered while
+  wiring `main.cpp` that a single shared `PgUserRepository`/transaction isn't safe across a
+  multithreaded server's concurrent requests). `main.cpp` fully wired (new `JWT_SECRET` env var,
+  dev fallback with a startup warning if used) and **live-verified manually**: ran the real
+  server against real Postgres, curl'd the full register → login → me → change-password flow,
+  everything matched, cleaned up the test user afterward.
+- Found two real things worth knowing about: a genuine **timing side-channel** in login (wrong
+  password ~224ms vs. unknown email ~0ms, despite an identical error message) — deferred as a
+  documented v1 limitation, not fixed; and confirmed catch-order matters in the HTTP handlers
+  (`WeakPasswordError`/`DuplicateEmailError` both derive from `std::runtime_error`, so specific
+  catches must precede the general one).
+- `ctest` = **70/70** (was 54 at the start of today's #18 HTTP-layer work). Full narrative
+  (16 steps, every decision with reasoning) in `docs/phase-2-slice-1-auth.md`.
+- Next: `#24` — Client auth UI (register/login forms, token storage, authed fetch). Different
+  stack (React/TS) from everything above.
+
 ## 2026-07-12 — VS Code (2)
 - Finished `#17`: `IPasswordHasher`/`Argon2PasswordHasher` (real argon2id, fresh random salt per
   call via OpenSSL `RAND_bytes`), `ITokenService`/`JwtTokenService` (HS256, **24h expiry** —

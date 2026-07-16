@@ -51,16 +51,24 @@ case list in `docs/02-api-contract.md`; full step-by-step build log in
 design): Google OAuth, "forgot password" reset (needs email infra), account deletion (needs
 re-auth + cascade-delete design), login rate-limiting, email verification.
 
-**`#16` and `#17` COMPLETE (2026-07-12).** `#16`: `db::PgUserRepository` (real Postgres adapter),
-tested via `DbTest`. `#17`: `IPasswordHasher`/`Argon2PasswordHasher` (real argon2id, random salt
-per call), `ITokenService`/`JwtTokenService` (HS256, **24h expiry** — locked decision, no refresh
-tokens in v1 so this is the actual session length), and the `authenticate()` function in
+**`#16`, `#17`, `#18` COMPLETE (2026-07-16) — Slice 1's backend is fully done.** `#16`:
+`db::PgUserRepository` (real Postgres adapter), tested via `DbTest`. `#17`:
+`IPasswordHasher`/`Argon2PasswordHasher` (real argon2id, random salt per call),
+`ITokenService`/`JwtTokenService` (HS256, **24h expiry** — locked decision, no refresh tokens in
+v1 so this is the actual session length), and the `authenticate()` function in
 `http/middleware/Authenticator.h` (deliberately **not** Crow middleware — `HttpClient`'s
-`handle_full()` doesn't run it). Auth deps promoted from `fitapp_tests`-only onto `fitapp_server`
-+ `Server/Dockerfile` (Dockerfile package names **not build-verified locally** — this project
-never builds Docker images on the 8GB dev machine; CI is the real check). **Not yet built:** all
-HTTP-level tests + handlers (#18: register, login, me, change-password) and Client auth (#24).
-`ctest` = **39/39** locally (27 previous + 12 new). Dev stack re-verified end-to-end
+`handle_full()` doesn't run it). `#18`: `app/` services (`RegisterUser`, `LoginUser`,
+`ChangePassword`), `http/dto/AuthDto.h` + `http/controllers/AuthController` (all 4 endpoints:
+register/login/me/change-password), a production-only `AutoCommitPgUserRepository` (opens a fresh
+connection+transaction per call — a shared long-lived transaction isn't safe across a
+multithreaded server's concurrent requests), and `main.cpp` fully wired (incl. a `JWT_SECRET` env
+var with a dev fallback that logs a warning when used). **Live-verified manually** against the
+real server + Postgres, not just tests: full register → login → me → change-password flow via
+curl, all correct. Auth deps promoted from `fitapp_tests`-only onto `fitapp_server` +
+`Server/Dockerfile` (Dockerfile package names **not build-verified locally** — this project never
+builds Docker images on the 8GB dev machine; CI is the real check). **Not yet built:** Client auth
+(`#24` — register/login forms, token storage, authed fetch; different stack, not started).
+`ctest` = **70/70** locally. Dev stack re-verified end-to-end
 (Postgres → Server → Client proxy → health OK).
 
 ## Machine constraints (important)
@@ -138,12 +146,13 @@ endpoint → UI), **auth first** (every other endpoint is 🔒).
   adapters/db/ config/`, each with a role README), argon2 + jwt-cpp wired + smoke-tested (MSYS2 + CI),
   `Migrator` startup runner (owns `schema_migrations`, fails closed), `DbTest` harness, full v1 schema
   (`0002_core_schema.sql`).
-- **Slice 1 — Auth (IN PROGRESS):** #16 repo ports + fakes ✅ **done**, #17 argon2+JWT+
-  **authenticator fn** ✅ **done** (not Crow middleware — see Testing architecture), #18
-  register/login/me/**change-password** (not started), #24 Client auth. Password policy (min 8
-  chars + ≥1 uppercase) and login error shape (generic 401, no email-enumeration) locked in
-  `docs/02-api-contract.md`. **Explicitly deferred to future slices:** Google OAuth,
-  forgot-password reset, account deletion, login rate-limiting, email verification.
+- **Slice 1 — Auth (backend DONE, Client remains):** #16 repo ports + fakes ✅, #17 argon2+JWT+
+  **authenticator fn** ✅ (not Crow middleware — see Testing architecture), #18
+  register/login/me/**change-password** ✅ (live-verified against the real server/DB), #24 Client
+  auth (not started). Password policy (min 8 chars + ≥1 uppercase) and login error shape (generic
+  401, no email-enumeration) locked in `docs/02-api-contract.md`. **Explicitly deferred to future
+  slices:** Google OAuth, forgot-password reset, account deletion, login rate-limiting, email
+  verification.
 - **Slice 2 — Profile & Injuries:** #19 `/users/me`, #20 injuries CRUD, #25 FE forms (RHF+Zod).
 - **Slice 3 — Exercises + seed:** #21 catalog endpoints, #22 seed script, #26 FE browser.
 - **Slice 4 — Manual workouts:** #23 workouts CRUD, #27 FE builder.
@@ -203,11 +212,10 @@ See `docs/learning/how-to-run.md`. Two ways:
    (2026-07-12).
 2. ~~**#17** argon2 hasher + JWT issue/verify + **authenticator**~~ ✅ done (2026-07-12): auth deps
    now linked into `fitapp_server` + `Server/Dockerfile` (not just `fitapp_tests`).
-3. **#18** `POST /auth/register`, `POST /auth/login`, `GET /auth/me`, `PATCH /auth/password`
-   (handlers + DTOs; test via `HttpClient`) — write the failing HTTP tests first (register:
-   valid/duplicate-email/weak-password; login: valid/generic-401), *then* implement, likely via
-   small `app/` services (`RegisterUser`, `LoginUser`) wiring `PgUserRepository` +
-   `Argon2PasswordHasher` + `JwtTokenService` together for the first time. Not started yet.
-4. **#24** Client auth (login/register forms, token storage, authed fetch).
+3. ~~**#18** `POST /auth/register`, `POST /auth/login`, `GET /auth/me`, `PATCH /auth/password`~~
+   ✅ done (2026-07-16): `app/` services + `http/dto/` + `http/controllers/AuthController` + wired
+   into `main.cpp` (composition root) + live-verified against the real server/DB.
+4. **#24** Client auth (login/register forms, token storage, authed fetch) — not started. Different
+   stack (React/TS) from everything built for `#16`–`#18`.
 
 Capture Phase 2 locked decisions + auth-as-authenticator as ADRs (0013–00xx).

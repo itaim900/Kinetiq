@@ -7,8 +7,12 @@
 #include <string>
 #include <thread>
 
+#include "adapters/crypto/Argon2PasswordHasher.h"
+#include "adapters/crypto/JwtTokenService.h"
+#include "adapters/db/AutoCommitPgUserRepository.h"
 #include "adapters/db/Migrator.h"
 #include "config/Env.h"
+#include "http/controllers/AuthController.h"
 
 namespace {
 
@@ -76,6 +80,23 @@ int main() {
         res.add_header("Access-Control-Allow-Origin", "*");  // dev convenience
         return res;
     });
+
+    // --- Slice 1: auth ---
+    // JWT_SECRET has an insecure dev-only fallback, same convention as
+    // DB_PASSWORD below -- but unlike that one, warn loudly if it's in use,
+    // since a guessable JWT secret lets anyone forge a valid login token for
+    // any user (a leaked/default DB password is comparatively contained).
+    const std::string jwtSecretFallback = "dev-only-insecure-secret-change-in-production";
+    const std::string jwtSecret = fitapp::envOr("JWT_SECRET", jwtSecretFallback);
+    if (jwtSecret == jwtSecretFallback) {
+        CROW_LOG_WARNING << "JWT_SECRET not set -- using an insecure default. "
+                             "Set a real secret before deploying.";
+    }
+
+    fitapp::db::AutoCommitPgUserRepository users(buildConnString());
+    fitapp::crypto::Argon2PasswordHasher hasher;
+    fitapp::crypto::JwtTokenService tokens(jwtSecret, std::chrono::hours(24));
+    fitapp::http::registerAuthRoutes(app, users, hasher, tokens);
 
     // Bind to 127.0.0.1 by default (safe for local dev). In containers set
     // BIND_ADDR=0.0.0.0 so other containers (e.g. the frontend) can reach it.

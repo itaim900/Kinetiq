@@ -83,8 +83,13 @@ The groundwork every later slice needs. Detailed breakdown in §6.
   — see §8) → `CurrentUser`. Promoted onto `fitapp_server` + `Server/Dockerfile`. ✅ **#17
   complete**, 2026-07-12.
 - `POST /auth/register`, `POST /auth/login`, `GET /auth/me`, **`PATCH /auth/password`** (change
-  password while logged in — added to scope 2026-07-12, no new issue # yet, folds into #18).
-- Frontend: register/login flow, in-memory token handling.
+  password while logged in — added to scope 2026-07-12, no new issue # yet, folds into #18). Built
+  via `app/` services (`RegisterUser`, `LoginUser`, `ChangePassword`) + `http/dto/AuthDto.h` +
+  `http/controllers/AuthController` + a production-only `AutoCommitPgUserRepository` (connection-
+  per-call, since routes are registered once at startup but a Postgres transaction is per-
+  operation) + wired into `main.cpp`. ✅ **#18 complete**, 2026-07-16 — live-verified against the
+  real server and database, not just the test suite.
+- Frontend: register/login flow, in-memory token handling. (`#24`, not started.)
 - **Contract tests:** duplicate email → 409; wrong password → 401 (generic, no email
   enumeration); weak password → 422; token required on `me`; wrong current-password on change → 401.
 - **Explicitly deferred** (2026-07-12): Google OAuth, forgot-password/reset (needs email infra),
