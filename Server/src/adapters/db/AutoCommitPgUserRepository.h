@@ -4,7 +4,7 @@
 
 #include <string>
 
-namespace fitapp::db {
+namespace kinetiq::db {
 
 // Production IUserRepository: opens a fresh Postgres connection + transaction
 // for EACH call, delegates to PgUserRepository, commits, and closes --
@@ -25,18 +25,18 @@ namespace fitapp::db {
 // concurrent requests); closing it properly would mean threading a
 // transaction through Crow's request lifecycle, which nothing in this
 // codebase does yet.
-class AutoCommitPgUserRepository : public fitapp::ports::IUserRepository {
+class AutoCommitPgUserRepository : public kinetiq::ports::IUserRepository {
 public:
     explicit AutoCommitPgUserRepository(std::string connString)
         : connString_(std::move(connString)) {}
 
-    fitapp::domain::User save(const fitapp::domain::User& user) override;
-    std::optional<fitapp::domain::User> findByEmail(const std::string& email) override;
-    std::optional<fitapp::domain::User> findById(long long id) override;
-    void update(const fitapp::domain::User& user) override;
+    kinetiq::domain::User save(const kinetiq::domain::User& user) override;
+    std::optional<kinetiq::domain::User> findByEmail(const std::string& email) override;
+    std::optional<kinetiq::domain::User> findById(long long id) override;
+    void update(const kinetiq::domain::User& user) override;
 
 private:
     std::string connString_;
 };
 
-}  // namespace fitapp::db
+}  // namespace kinetiq::db

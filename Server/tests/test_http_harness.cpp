@@ -35,7 +35,7 @@ void defineRoutes(crow::SimpleApp& app) {
 TEST(HttpHarness, RoutesGetRequest) {
     crow::SimpleApp app;
     defineRoutes(app);
-    fitapp::testing::HttpClient client(app);
+    kinetiq::testing::HttpClient client(app);
 
     const auto r = client.get("/ping");
     EXPECT_EQ(r.code, 200);
@@ -45,7 +45,7 @@ TEST(HttpHarness, RoutesGetRequest) {
 TEST(HttpHarness, PostReturnsBodyAndStatus) {
     crow::SimpleApp app;
     defineRoutes(app);
-    fitapp::testing::HttpClient client(app);
+    kinetiq::testing::HttpClient client(app);
 
     const auto r = client.post("/echo", "hello world");
     EXPECT_EQ(r.code, 201);
@@ -55,7 +55,7 @@ TEST(HttpHarness, PostReturnsBodyAndStatus) {
 TEST(HttpHarness, PropagatesRequestHeaders) {
     crow::SimpleApp app;
     defineRoutes(app);
-    fitapp::testing::HttpClient client(app);
+    kinetiq::testing::HttpClient client(app);
 
     EXPECT_EQ(client.get("/whoami").code, 401);
 
@@ -67,7 +67,7 @@ TEST(HttpHarness, PropagatesRequestHeaders) {
 TEST(HttpHarness, UnknownRouteIs404) {
     crow::SimpleApp app;
     defineRoutes(app);
-    fitapp::testing::HttpClient client(app);
+    kinetiq::testing::HttpClient client(app);
 
     EXPECT_EQ(client.get("/does-not-exist").code, 404);
 }

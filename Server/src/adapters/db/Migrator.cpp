@@ -8,7 +8,7 @@
 #include <stdexcept>
 #include <vector>
 
-namespace fitapp::db {
+namespace kinetiq::db {
 
 namespace {
 
@@ -86,4 +86,4 @@ Migrator::Result Migrator::run() {
     return result;
 }
 
-}  // namespace fitapp::db
+}  // namespace kinetiq::db

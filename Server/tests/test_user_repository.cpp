@@ -9,9 +9,9 @@
 #include "ports/IUserRepository.h"
 #include "support/InMemoryUserRepository.h"
 
-using fitapp::domain::User;
-using fitapp::ports::DuplicateEmailError;
-using fitapp::testsupport::InMemoryUserRepository;
+using kinetiq::domain::User;
+using kinetiq::ports::DuplicateEmailError;
+using kinetiq::testsupport::InMemoryUserRepository;
 
 TEST(InMemoryUserRepositoryTest, SaveThenFindByEmail_ReturnsUser) {
     InMemoryUserRepository repo;

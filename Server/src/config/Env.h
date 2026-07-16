@@ -3,7 +3,7 @@
 #include <cstdlib>
 #include <string>
 
-namespace fitapp {
+namespace kinetiq {
 
 // Returns the value of environment variable `key`, or `fallback` if it is
 // unset or empty. Kept header-only and pure so it is trivially unit-testable.
@@ -12,4 +12,4 @@ inline std::string envOr(const char* key, const std::string& fallback) {
     return (value != nullptr && *value != '\0') ? std::string(value) : fallback;
 }
 
-}  // namespace fitapp
+}  // namespace kinetiq

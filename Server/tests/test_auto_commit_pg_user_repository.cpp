@@ -13,13 +13,13 @@
 
 #include <pqxx/pqxx>
 
-using fitapp::db::AutoCommitPgUserRepository;
-using fitapp::domain::User;
+using kinetiq::db::AutoCommitPgUserRepository;
+using kinetiq::domain::User;
 
 namespace {
 
 void deleteTestUser(const std::string& email) {
-    pqxx::connection conn(fitapp::testing::testConnString());
+    pqxx::connection conn(kinetiq::testing::testConnString());
     pqxx::work tx(conn);
     tx.exec("DELETE FROM users WHERE email = " + tx.quote(email));
     tx.commit();
@@ -28,11 +28,11 @@ void deleteTestUser(const std::string& email) {
 }  // namespace
 
 TEST(AutoCommitPgUserRepositoryTest, SaveThenFindByEmail_PersistsAcrossSeparateConnections) {
-    if (!fitapp::testing::ensureTestDatabaseReady()) {
+    if (!kinetiq::testing::ensureTestDatabaseReady()) {
         GTEST_SKIP() << "no test database reachable";
     }
 
-    AutoCommitPgUserRepository repo(fitapp::testing::testConnString());
+    AutoCommitPgUserRepository repo(kinetiq::testing::testConnString());
     const std::string email = "auto-commit-test@example.com";
 
     User user;
@@ -52,11 +52,11 @@ TEST(AutoCommitPgUserRepositoryTest, SaveThenFindByEmail_PersistsAcrossSeparateC
 }
 
 TEST(AutoCommitPgUserRepositoryTest, Update_PersistsAcrossSeparateConnections) {
-    if (!fitapp::testing::ensureTestDatabaseReady()) {
+    if (!kinetiq::testing::ensureTestDatabaseReady()) {
         GTEST_SKIP() << "no test database reachable";
     }
 
-    AutoCommitPgUserRepository repo(fitapp::testing::testConnString());
+    AutoCommitPgUserRepository repo(kinetiq::testing::testConnString());
     const std::string email = "auto-commit-update-test@example.com";
 
     User user;

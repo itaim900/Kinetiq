@@ -16,12 +16,12 @@
 
 #include <chrono>
 
-using fitapp::app::RegisterUser;
-using fitapp::app::RegisterUserRequest;
-using fitapp::crypto::Argon2PasswordHasher;
-using fitapp::crypto::JwtTokenService;
-using fitapp::ports::DuplicateEmailError;
-using fitapp::testsupport::InMemoryUserRepository;
+using kinetiq::app::RegisterUser;
+using kinetiq::app::RegisterUserRequest;
+using kinetiq::crypto::Argon2PasswordHasher;
+using kinetiq::crypto::JwtTokenService;
+using kinetiq::ports::DuplicateEmailError;
+using kinetiq::testsupport::InMemoryUserRepository;
 
 TEST(RegisterUserTest, ValidRequest_CreatesUserAndReturnsToken) {
     InMemoryUserRepository users;
@@ -56,7 +56,7 @@ TEST(RegisterUserTest, WeakPassword_ThrowsWithoutTouchingRepositoryOrHasher) {
 
     const RegisterUserRequest request{"bob@example.com", "short", "Bob"};
 
-    EXPECT_THROW(registerUser.execute(request), fitapp::domain::WeakPasswordError);
+    EXPECT_THROW(registerUser.execute(request), kinetiq::domain::WeakPasswordError);
     EXPECT_FALSE(users.findByEmail("bob@example.com").has_value());
 }
 

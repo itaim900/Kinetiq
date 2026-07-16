@@ -6,7 +6,7 @@
 #include <stdexcept>
 #include <string>
 
-namespace fitapp::ports {
+namespace kinetiq::ports {
 
 // Thrown by save() when the email is already registered (case-insensitive --
 // mirrors the `citext` UNIQUE constraint on Users.email in Postgres).
@@ -43,4 +43,4 @@ public:
     virtual void update(const domain::User& user) = 0;
 };
 
-}  // namespace fitapp::ports
+}  // namespace kinetiq::ports

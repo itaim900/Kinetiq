@@ -9,11 +9,11 @@
 
 #include <string>
 
-namespace fitapp::http::dto {
+namespace kinetiq::http::dto {
 
 // Parses a POST /auth/register request body into RegisterUserRequest.
-inline fitapp::app::RegisterUserRequest parseRegisterRequest(const crow::json::rvalue& body) {
-    fitapp::app::RegisterUserRequest request;
+inline kinetiq::app::RegisterUserRequest parseRegisterRequest(const crow::json::rvalue& body) {
+    kinetiq::app::RegisterUserRequest request;
     request.email = std::string(body["email"].s());
     request.password = std::string(body["password"].s());
     request.displayName = std::string(body["display_name"].s());
@@ -21,8 +21,8 @@ inline fitapp::app::RegisterUserRequest parseRegisterRequest(const crow::json::r
 }
 
 // Parses a POST /auth/login request body into LoginUserRequest.
-inline fitapp::app::LoginUserRequest parseLoginRequest(const crow::json::rvalue& body) {
-    fitapp::app::LoginUserRequest request;
+inline kinetiq::app::LoginUserRequest parseLoginRequest(const crow::json::rvalue& body) {
+    kinetiq::app::LoginUserRequest request;
     request.email = std::string(body["email"].s());
     request.password = std::string(body["password"].s());
     return request;
@@ -30,9 +30,9 @@ inline fitapp::app::LoginUserRequest parseLoginRequest(const crow::json::rvalue&
 
 // Parses a PATCH /auth/password request body, pairing it with the
 // authenticated user's id (from the token, never from the request body).
-inline fitapp::app::ChangePasswordRequest parseChangePasswordRequest(
+inline kinetiq::app::ChangePasswordRequest parseChangePasswordRequest(
     const crow::json::rvalue& body, long long userId) {
-    fitapp::app::ChangePasswordRequest request;
+    kinetiq::app::ChangePasswordRequest request;
     request.userId = userId;
     request.currentPassword = std::string(body["current_password"].s());
     request.newPassword = std::string(body["new_password"].s());
@@ -41,7 +41,7 @@ inline fitapp::app::ChangePasswordRequest parseChangePasswordRequest(
 
 // The `user` sub-object shared by register/login/me responses. Deliberately
 // excludes passwordHash -- never serialize it onto the wire.
-inline crow::json::wvalue userToJson(const fitapp::domain::User& user) {
+inline crow::json::wvalue userToJson(const kinetiq::domain::User& user) {
     crow::json::wvalue json;
     json["id"] = user.id;
     json["email"] = user.email;
@@ -50,7 +50,7 @@ inline crow::json::wvalue userToJson(const fitapp::domain::User& user) {
 }
 
 // { user: {...}, access_token: "..." } -- register/login share this shape.
-inline crow::json::wvalue authResultToJson(const fitapp::domain::User& user,
+inline crow::json::wvalue authResultToJson(const kinetiq::domain::User& user,
                                             const std::string& accessToken) {
     crow::json::wvalue json;
     json["user"] = userToJson(user);
@@ -71,4 +71,4 @@ inline crow::response errorResponse(int status, const std::string& type, const s
     return crow::response(status, json);
 }
 
-}  // namespace fitapp::http::dto
+}  // namespace kinetiq::http::dto

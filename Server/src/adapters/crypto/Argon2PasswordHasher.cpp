@@ -7,7 +7,7 @@
 #include <stdexcept>
 #include <vector>
 
-namespace fitapp::crypto {
+namespace kinetiq::crypto {
 
 namespace {
 
@@ -52,4 +52,4 @@ bool Argon2PasswordHasher::verify(const std::string& hash, const std::string& pa
     return argon2id_verify(hash.c_str(), password.data(), password.size()) == ARGON2_OK;
 }
 
-}  // namespace fitapp::crypto
+}  // namespace kinetiq::crypto

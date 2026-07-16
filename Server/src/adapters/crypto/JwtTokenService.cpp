@@ -4,10 +4,10 @@
 
 #include <exception>
 
-namespace fitapp::crypto {
+namespace kinetiq::crypto {
 
 namespace {
-constexpr const char* kIssuer = "fitapp";
+constexpr const char* kIssuer = "kinetiq";
 }
 
 std::string JwtTokenService::issue(long long userId) {
@@ -36,4 +36,4 @@ std::optional<long long> JwtTokenService::verify(const std::string& token) {
     }
 }
 
-}  // namespace fitapp::crypto
+}  // namespace kinetiq::crypto

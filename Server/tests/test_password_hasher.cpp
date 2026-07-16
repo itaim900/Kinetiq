@@ -7,7 +7,7 @@
 
 #include "adapters/crypto/Argon2PasswordHasher.h"
 
-using fitapp::crypto::Argon2PasswordHasher;
+using kinetiq::crypto::Argon2PasswordHasher;
 
 TEST(Argon2PasswordHasherTest, HashThenVerify_CorrectPassword_Succeeds) {
     Argon2PasswordHasher hasher;

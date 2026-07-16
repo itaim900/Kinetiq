@@ -11,9 +11,9 @@
 #include "domain/User.h"
 #include "ports/IUserRepository.h"
 
-using fitapp::db::PgUserRepository;
-using fitapp::domain::User;
-using fitapp::ports::DuplicateEmailError;
+using kinetiq::db::PgUserRepository;
+using kinetiq::domain::User;
+using kinetiq::ports::DuplicateEmailError;
 
 TEST_F(DbTest, PgUserRepository_SaveThenFindByEmail_ReturnsUser) {
     if (!available()) GTEST_SKIP() << "no test database reachable";

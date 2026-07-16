@@ -8,7 +8,7 @@
 #include <stdexcept>
 #include <string>
 
-namespace fitapp::app {
+namespace kinetiq::app {
 
 struct LoginUserRequest {
     std::string email;
@@ -16,7 +16,7 @@ struct LoginUserRequest {
 };
 
 struct LoginUserResult {
-    fitapp::domain::User user;
+    kinetiq::domain::User user;
     std::string accessToken;
 };
 
@@ -31,8 +31,8 @@ public:
 
 class LoginUser {
 public:
-    LoginUser(fitapp::ports::IUserRepository& users, fitapp::ports::IPasswordHasher& hasher,
-              fitapp::ports::ITokenService& tokens)
+    LoginUser(kinetiq::ports::IUserRepository& users, kinetiq::ports::IPasswordHasher& hasher,
+              kinetiq::ports::ITokenService& tokens)
         : users_(users), hasher_(hasher), tokens_(tokens) {}
 
     LoginUserResult execute(const LoginUserRequest& request) {
@@ -46,9 +46,9 @@ public:
     }
 
 private:
-    fitapp::ports::IUserRepository& users_;
-    fitapp::ports::IPasswordHasher& hasher_;
-    fitapp::ports::ITokenService& tokens_;
+    kinetiq::ports::IUserRepository& users_;
+    kinetiq::ports::IPasswordHasher& hasher_;
+    kinetiq::ports::ITokenService& tokens_;
 };
 
-}  // namespace fitapp::app
+}  // namespace kinetiq::app

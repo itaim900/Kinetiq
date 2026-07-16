@@ -4,18 +4,18 @@
 
 #include <pqxx/pqxx>
 
-namespace fitapp::db {
+namespace kinetiq::db {
 
-fitapp::domain::User AutoCommitPgUserRepository::save(const fitapp::domain::User& user) {
+kinetiq::domain::User AutoCommitPgUserRepository::save(const kinetiq::domain::User& user) {
     pqxx::connection conn(connString_);
     pqxx::work tx(conn);
     PgUserRepository repo(tx);
-    fitapp::domain::User result = repo.save(user);
+    kinetiq::domain::User result = repo.save(user);
     tx.commit();
     return result;
 }
 
-std::optional<fitapp::domain::User> AutoCommitPgUserRepository::findByEmail(
+std::optional<kinetiq::domain::User> AutoCommitPgUserRepository::findByEmail(
     const std::string& email) {
     pqxx::connection conn(connString_);
     pqxx::work tx(conn);
@@ -25,7 +25,7 @@ std::optional<fitapp::domain::User> AutoCommitPgUserRepository::findByEmail(
     return result;
 }
 
-std::optional<fitapp::domain::User> AutoCommitPgUserRepository::findById(long long id) {
+std::optional<kinetiq::domain::User> AutoCommitPgUserRepository::findById(long long id) {
     pqxx::connection conn(connString_);
     pqxx::work tx(conn);
     PgUserRepository repo(tx);
@@ -34,7 +34,7 @@ std::optional<fitapp::domain::User> AutoCommitPgUserRepository::findById(long lo
     return result;
 }
 
-void AutoCommitPgUserRepository::update(const fitapp::domain::User& user) {
+void AutoCommitPgUserRepository::update(const kinetiq::domain::User& user) {
     pqxx::connection conn(connString_);
     pqxx::work tx(conn);
     PgUserRepository repo(tx);
@@ -42,4 +42,4 @@ void AutoCommitPgUserRepository::update(const fitapp::domain::User& user) {
     tx.commit();
 }
 
-}  // namespace fitapp::db
+}  // namespace kinetiq::db

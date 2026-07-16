@@ -11,12 +11,12 @@
 #include "domain/User.h"
 #include "support/InMemoryUserRepository.h"
 
-using fitapp::app::ChangePassword;
-using fitapp::app::ChangePasswordRequest;
-using fitapp::app::InvalidCredentialsError;
-using fitapp::crypto::Argon2PasswordHasher;
-using fitapp::domain::User;
-using fitapp::testsupport::InMemoryUserRepository;
+using kinetiq::app::ChangePassword;
+using kinetiq::app::ChangePasswordRequest;
+using kinetiq::app::InvalidCredentialsError;
+using kinetiq::crypto::Argon2PasswordHasher;
+using kinetiq::domain::User;
+using kinetiq::testsupport::InMemoryUserRepository;
 
 namespace {
 
@@ -70,7 +70,7 @@ TEST(ChangePasswordTest, WeakNewPassword_ThrowsAndLeavesPasswordUnchanged) {
     const User seeded = seedUser(users, hasher, "jack@example.com", "OldPass1");
 
     EXPECT_THROW(changePassword.execute({seeded.id, "OldPass1", "weak"}),
-                 fitapp::domain::WeakPasswordError);
+                 kinetiq::domain::WeakPasswordError);
 
     const auto stillOld = users.findById(seeded.id);
     ASSERT_TRUE(stillOld.has_value());

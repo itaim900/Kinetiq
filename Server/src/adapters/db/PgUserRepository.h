@@ -5,7 +5,7 @@
 
 #include <pqxx/pqxx>
 
-namespace fitapp::db {
+namespace kinetiq::db {
 
 // Postgres-backed IUserRepository. Operates within a transaction it is
 // handed rather than one it owns, so it composes with whatever transaction
@@ -13,17 +13,17 @@ namespace fitapp::db {
 // tests, a per-request transaction in production. A pqxx::connection can
 // only have one transaction open at a time, so this class must not try to
 // start its own.
-class PgUserRepository : public fitapp::ports::IUserRepository {
+class PgUserRepository : public kinetiq::ports::IUserRepository {
 public:
     explicit PgUserRepository(pqxx::work& tx) : tx_(tx) {}
 
-    fitapp::domain::User save(const fitapp::domain::User& user) override;
-    std::optional<fitapp::domain::User> findByEmail(const std::string& email) override;
-    std::optional<fitapp::domain::User> findById(long long id) override;
-    void update(const fitapp::domain::User& user) override;
+    kinetiq::domain::User save(const kinetiq::domain::User& user) override;
+    std::optional<kinetiq::domain::User> findByEmail(const std::string& email) override;
+    std::optional<kinetiq::domain::User> findById(long long id) override;
+    void update(const kinetiq::domain::User& user) override;
 
 private:
     pqxx::work& tx_;
 };
 
-}  // namespace fitapp::db
+}  // namespace kinetiq::db

@@ -8,7 +8,7 @@
 #include <string>
 #include <string_view>
 
-namespace fitapp::http {
+namespace kinetiq::http {
 
 // The currently authenticated user, resolved from a request's token.
 struct CurrentUser {
@@ -25,7 +25,7 @@ struct CurrentUser {
 // middleware-based auth would be untestable without a real socket. Protected
 // handlers call this directly instead. See phase-2-plan.md §8.
 inline std::optional<CurrentUser> authenticate(const crow::request& req,
-                                                fitapp::ports::ITokenService& tokens) {
+                                                kinetiq::ports::ITokenService& tokens) {
     constexpr std::string_view kPrefix = "Bearer ";
     const std::string header = req.get_header_value("Authorization");
 
@@ -40,4 +40,4 @@ inline std::optional<CurrentUser> authenticate(const crow::request& req,
     return CurrentUser{*userId};
 }
 
-}  // namespace fitapp::http
+}  // namespace kinetiq::http

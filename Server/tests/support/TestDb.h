@@ -6,11 +6,11 @@
 #include <memory>
 #include <string>
 
-namespace fitapp::testing {
+namespace kinetiq::testing {
 
 // Connection string for the integration-test database (a separate DB from the
 // dev one so tests never touch real data). Built from DB_* env vars, with the
-// database name from TEST_DB_NAME (default "fitapp_test").
+// database name from TEST_DB_NAME (default "kinetiq_test").
 std::string testConnString();
 
 // Connection string to the "postgres" maintenance DB, used only to CREATE the
@@ -21,7 +21,7 @@ std::string maintenanceConnString();
 // if no Postgres server is reachable — callers should then GTEST_SKIP().
 bool ensureTestDatabaseReady();
 
-}  // namespace fitapp::testing
+}  // namespace kinetiq::testing
 
 // Base fixture for integration tests that need a real database.
 //

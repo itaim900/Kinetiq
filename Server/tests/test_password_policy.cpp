@@ -6,7 +6,7 @@
 
 #include "domain/PasswordPolicy.h"
 
-using fitapp::domain::isPasswordStrong;
+using kinetiq::domain::isPasswordStrong;
 
 TEST(PasswordPolicy, RejectsPasswordsShorterThanEightChars) {
     EXPECT_FALSE(isPasswordStrong("Short1"));   // 6 chars, has uppercase, still too short

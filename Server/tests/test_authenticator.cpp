@@ -13,8 +13,8 @@
 
 #include <chrono>
 
-using fitapp::crypto::JwtTokenService;
-using fitapp::http::authenticate;
+using kinetiq::crypto::JwtTokenService;
+using kinetiq::http::authenticate;
 
 TEST(AuthenticatorTest, MissingAuthorizationHeader_ReturnsNullopt) {
     JwtTokenService tokens("secret", std::chrono::seconds(3600));

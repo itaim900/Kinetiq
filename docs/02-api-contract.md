@@ -1,4 +1,4 @@
-# User-Client API Contract — Fit App (v1)
+# User-Client API Contract — KinetiQ (v1)
 
 **Status:** Approved (design phase)
 **Last updated:** 2026-06-23

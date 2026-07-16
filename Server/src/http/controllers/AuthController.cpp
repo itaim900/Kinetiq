@@ -6,11 +6,11 @@
 #include "http/dto/AuthDto.h"
 #include "http/middleware/Authenticator.h"
 
-namespace fitapp::http {
+namespace kinetiq::http {
 
-void registerAuthRoutes(crow::SimpleApp& app, fitapp::ports::IUserRepository& users,
-                         fitapp::ports::IPasswordHasher& hasher,
-                         fitapp::ports::ITokenService& tokens) {
+void registerAuthRoutes(crow::SimpleApp& app, kinetiq::ports::IUserRepository& users,
+                         kinetiq::ports::IPasswordHasher& hasher,
+                         kinetiq::ports::ITokenService& tokens) {
     CROW_ROUTE(app, "/api/v1/auth/register")
         .methods(crow::HTTPMethod::Post)([&users, &hasher, &tokens](const crow::request& req) {
             const auto body = crow::json::load(req.body);
@@ -19,15 +19,15 @@ void registerAuthRoutes(crow::SimpleApp& app, fitapp::ports::IUserRepository& us
                                            "Request body is not valid JSON.");
             }
 
-            fitapp::app::RegisterUser registerUser(users, hasher, tokens);
+            kinetiq::app::RegisterUser registerUser(users, hasher, tokens);
             try {
                 const auto result = registerUser.execute(dto::parseRegisterRequest(body));
                 auto json = dto::authResultToJson(result.user, result.accessToken);
                 return crow::response(201, json);
-            } catch (const fitapp::domain::WeakPasswordError&) {
+            } catch (const kinetiq::domain::WeakPasswordError&) {
                 return dto::errorResponse(422, "validation_error", "Validation Failed",
                                            "Password does not meet the strength policy.");
-            } catch (const fitapp::ports::DuplicateEmailError&) {
+            } catch (const kinetiq::ports::DuplicateEmailError&) {
                 return dto::errorResponse(409, "conflict", "Conflict",
                                            "Email is already registered.");
             } catch (const std::exception&) {
@@ -48,12 +48,12 @@ void registerAuthRoutes(crow::SimpleApp& app, fitapp::ports::IUserRepository& us
                                            "Request body is not valid JSON.");
             }
 
-            fitapp::app::LoginUser loginUser(users, hasher, tokens);
+            kinetiq::app::LoginUser loginUser(users, hasher, tokens);
             try {
                 const auto result = loginUser.execute(dto::parseLoginRequest(body));
                 auto json = dto::authResultToJson(result.user, result.accessToken);
                 return crow::response(200, json);
-            } catch (const fitapp::app::InvalidCredentialsError&) {
+            } catch (const kinetiq::app::InvalidCredentialsError&) {
                 // Same message for wrong password AND unknown email -- see
                 // InvalidCredentialsError's comment in app/LoginUser.h.
                 return dto::errorResponse(401, "invalid_credentials", "Unauthorized",
@@ -98,15 +98,15 @@ void registerAuthRoutes(crow::SimpleApp& app, fitapp::ports::IUserRepository& us
                                                "Request body is not valid JSON.");
                 }
 
-                fitapp::app::ChangePassword changePassword(users, hasher);
+                kinetiq::app::ChangePassword changePassword(users, hasher);
                 try {
                     changePassword.execute(
                         dto::parseChangePasswordRequest(body, currentUser->userId));
                     return crow::response(200);
-                } catch (const fitapp::domain::WeakPasswordError&) {
+                } catch (const kinetiq::domain::WeakPasswordError&) {
                     return dto::errorResponse(422, "validation_error", "Validation Failed",
                                                "New password does not meet the strength policy.");
-                } catch (const fitapp::app::InvalidCredentialsError&) {
+                } catch (const kinetiq::app::InvalidCredentialsError&) {
                     return dto::errorResponse(401, "invalid_credentials", "Unauthorized",
                                                "Current password is incorrect.");
                 } catch (const std::exception&) {
@@ -116,4 +116,4 @@ void registerAuthRoutes(crow::SimpleApp& app, fitapp::ports::IUserRepository& us
             });
 }
 
-}  // namespace fitapp::http
+}  // namespace kinetiq::http

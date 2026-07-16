@@ -17,11 +17,11 @@
 namespace {
 
 std::string buildConnString() {
-    return "host=" + fitapp::envOr("DB_HOST", "127.0.0.1") +
-           " port=" + fitapp::envOr("DB_PORT", "5432") +
-           " dbname=" + fitapp::envOr("DB_NAME", "fitapp") +
-           " user=" + fitapp::envOr("DB_USER", "fitapp") +
-           " password=" + fitapp::envOr("DB_PASSWORD", "fitapp");
+    return "host=" + kinetiq::envOr("DB_HOST", "127.0.0.1") +
+           " port=" + kinetiq::envOr("DB_PORT", "5432") +
+           " dbname=" + kinetiq::envOr("DB_NAME", "kinetiq") +
+           " user=" + kinetiq::envOr("DB_USER", "kinetiq") +
+           " password=" + kinetiq::envOr("DB_PASSWORD", "kinetiq");
 }
 
 // Connect with a few retries so we tolerate the DB still warming up (e.g. the
@@ -45,7 +45,7 @@ pqxx::connection connectWithRetry() {
 bool runMigrations() {
     try {
         pqxx::connection conn = connectWithRetry();
-        fitapp::db::Migrator migrator(conn, fitapp::envOr("MIGRATIONS_DIR", "migrations"));
+        kinetiq::db::Migrator migrator(conn, kinetiq::envOr("MIGRATIONS_DIR", "migrations"));
         migrator.run();
         return true;
     } catch (const std::exception& e) {
@@ -87,21 +87,21 @@ int main() {
     // since a guessable JWT secret lets anyone forge a valid login token for
     // any user (a leaked/default DB password is comparatively contained).
     const std::string jwtSecretFallback = "dev-only-insecure-secret-change-in-production";
-    const std::string jwtSecret = fitapp::envOr("JWT_SECRET", jwtSecretFallback);
+    const std::string jwtSecret = kinetiq::envOr("JWT_SECRET", jwtSecretFallback);
     if (jwtSecret == jwtSecretFallback) {
         CROW_LOG_WARNING << "JWT_SECRET not set -- using an insecure default. "
                              "Set a real secret before deploying.";
     }
 
-    fitapp::db::AutoCommitPgUserRepository users(buildConnString());
-    fitapp::crypto::Argon2PasswordHasher hasher;
-    fitapp::crypto::JwtTokenService tokens(jwtSecret, std::chrono::hours(24));
-    fitapp::http::registerAuthRoutes(app, users, hasher, tokens);
+    kinetiq::db::AutoCommitPgUserRepository users(buildConnString());
+    kinetiq::crypto::Argon2PasswordHasher hasher;
+    kinetiq::crypto::JwtTokenService tokens(jwtSecret, std::chrono::hours(24));
+    kinetiq::http::registerAuthRoutes(app, users, hasher, tokens);
 
     // Bind to 127.0.0.1 by default (safe for local dev). In containers set
     // BIND_ADDR=0.0.0.0 so other containers (e.g. the frontend) can reach it.
-    const std::string bindAddr = fitapp::envOr("BIND_ADDR", "127.0.0.1");
-    CROW_LOG_INFO << "Fit App backend listening on http://" << bindAddr << ":8080";
+    const std::string bindAddr = kinetiq::envOr("BIND_ADDR", "127.0.0.1");
+    CROW_LOG_INFO << "KinetiQ backend listening on http://" << bindAddr << ":8080";
     app.bindaddr(bindAddr).port(8080).multithreaded().run();
     return 0;
 }

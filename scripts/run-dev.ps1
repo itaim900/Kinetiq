@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Runs the Fit App server or client with automatic cleanup.
+  Runs the KinetiQ server or client with automatic cleanup.
 
 .DESCRIPTION
   Starts the given target (server or client) and binds its lifetime to this
@@ -33,7 +33,7 @@ switch ($Target) {
     "server" {
         $env:PATH = "C:\msys64\ucrt64\bin;" + $env:PATH
         $workDir = Join-Path $repoRoot "Server"
-        $fileName = Join-Path $workDir "build\fitapp_server.exe"
+        $fileName = Join-Path $workDir "build\kinetiq_server.exe"
         $argumentList = ""
     }
     "client" {

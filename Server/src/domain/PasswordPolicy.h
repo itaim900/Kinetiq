@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <string>
 
-namespace fitapp::domain {
+namespace kinetiq::domain {
 
 // Password strength rule: minimum 8 characters, at least one uppercase
 // letter. Decision recorded in docs/02-api-contract.md (updated 2026-07-12).
@@ -34,4 +34,4 @@ inline void requireStrongPassword(const std::string& password) {
     }
 }
 
-}  // namespace fitapp::domain
+}  // namespace kinetiq::domain

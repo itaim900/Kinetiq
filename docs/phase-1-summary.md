@@ -38,7 +38,7 @@ Final acceptance test, run 2026-07-05 (images pulled **anonymously** from public
 | All containers up | ✅ postgres (healthy), backend, frontend |
 | `http://localhost:3000/api/v1/health` (via nginx proxy) | ✅ `{"db":"connected","status":"ok"}` |
 | `http://localhost:8080/api/v1/health` (backend direct) | ✅ `{"db":"connected","status":"ok"}` |
-| `http://localhost:3000/` (SPA served) | ✅ page title "Fit App" |
+| `http://localhost:3000/` (SPA served) | ✅ page title "KinetiQ" |
 | CI on `main` | ✅ green (backend + frontend) |
 | Publish images on `main` | ✅ both images built & pushed |
 
@@ -53,7 +53,7 @@ Final acceptance test, run 2026-07-05 (images pulled **anonymously** from public
 | `src/config/Env.h` | Header-only `envOr(key, fallback)` helper for reading env vars (pure + unit-testable) |
 | `tests/test_main.cpp` | GoogleTest unit tests for `Env.h` |
 | `migrations/0001_init.sql` | Baseline migration: `citext` extension + `schema_migrations` bookkeeping table |
-| `CMakeLists.txt` | Build recipe. Options: `FITAPP_FETCH_LIBPQXX` (build libpqxx from source on Linux), `FITAPP_BUILD_TESTS` (skip tests in image). Windows socket libs guarded by `if(WIN32)` |
+| `CMakeLists.txt` | Build recipe. Options: `KINETIQ_FETCH_LIBPQXX` (build libpqxx from source on Linux), `KINETIQ_BUILD_TESTS` (skip tests in image). Windows socket libs guarded by `if(WIN32)` |
 | `CMakePresets.json` | `default` preset: Ninja generator, MSYS2 GCC |
 | `third_party/crow/crow_all.h` | Vendored single-header Crow web framework |
 | `Dockerfile` | Multi-stage: Ubuntu build (compiles libpqxx + server) → slim runtime image |
@@ -95,7 +95,7 @@ as an ADR.
 | **vcpkg → MSYS2** (toolchain) | vcpkg's source builds were too heavy; MSYS2 offers fast prebuilt packages | ADR-0012 (supersedes 0005) |
 | **Native Postgres → Docker Postgres** | MSYS2 native Postgres broke with a DLL/ICU conflict after a partial `pacman -Sy` | ADR-0004 |
 | **Cross-platform build** | Windows socket libs (`ws2_32`, etc.) don't exist on Linux → guard with `if(WIN32)` | in `CMakeLists.txt` |
-| **libpqxx from source on Linux** | Ubuntu's `libpqxx-dev` 7.8.1 has a header/lib `std::source_location` mismatch that breaks linking | `FITAPP_FETCH_LIBPQXX` option |
+| **libpqxx from source on Linux** | Ubuntu's `libpqxx-dev` 7.8.1 has a header/lib `std::source_location` mismatch that breaks linking | `KINETIQ_FETCH_LIBPQXX` option |
 | **Images built in CI, not locally** | Building libpqxx from source OOMs on 8 GB — GitHub runners (~16 GB) do it instead; the dev machine only pulls & runs | `images.yml` |
 | **`backend/`→`Server/`, `frontend/`→`Client/`** | Clearer naming (service/image names kept as `backend`/`frontend` for compatibility) | PR #39 |
 
@@ -106,7 +106,7 @@ as an ADR.
 **Dev (fast iteration):**
 ```powershell
 docker compose up -d                         # Postgres only
-# in Server/:  cmake --preset default && cmake --build --preset default && ./build/fitapp_server.exe
+# in Server/:  cmake --preset default && cmake --build --preset default && ./build/kinetiq_server.exe
 # in Client/:  npm run dev                    # http://localhost:5173
 ```
 
@@ -140,9 +140,9 @@ health check. All real features start in **Phase 2**.
 
 ## 8. Links
 
-- Repo: https://github.com/itaim900/Fit-App
-- Actions: https://github.com/itaim900/Fit-App/actions
-- Images: `ghcr.io/itaim900/fit-app-backend`, `ghcr.io/itaim900/fit-app-frontend`
+- Repo: https://github.com/itaim900/KinetiQ
+- Actions: https://github.com/itaim900/KinetiQ/actions
+- Images: `ghcr.io/itaim900/kinetiq-backend`, `ghcr.io/itaim900/kinetiq-frontend`
 - Merge PR: #39
 - Related docs: `01-data-model.md`, `02-api-contract.md`, `03-llm-port.md`, `04-architecture.md`,
   `05-roadmap.md`, `adr/`

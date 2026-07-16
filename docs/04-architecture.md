@@ -1,4 +1,4 @@
-# System Architecture — Fit App (v1)
+# System Architecture — KinetiQ (v1)
 
 **Status:** Approved — kept in sync with implementation as Phases 1-2 land (was a pre-build design
 doc as of 2026-06-24; corrected against actual code 2026-07-16 after Phase 1 + Slice 1 (Auth)).

@@ -2,7 +2,7 @@
 
 #include <string>
 
-namespace fitapp::ports {
+namespace kinetiq::ports {
 
 // Port for password hashing. Implementation: Argon2PasswordHasher
 // (adapters/crypto/, real). No in-memory fake yet -- introduce one only when
@@ -20,4 +20,4 @@ public:
     virtual bool verify(const std::string& hash, const std::string& password) = 0;
 };
 
-}  // namespace fitapp::ports
+}  // namespace kinetiq::ports

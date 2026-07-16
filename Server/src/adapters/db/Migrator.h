@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <string>
 
-namespace fitapp::db {
+namespace kinetiq::db {
 
 // Applies SQL migrations from a directory on startup.
 //
@@ -36,4 +36,4 @@ private:
     std::filesystem::path directory_;
 };
 
-}  // namespace fitapp::db
+}  // namespace kinetiq::db

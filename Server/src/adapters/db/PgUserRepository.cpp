@@ -1,11 +1,11 @@
 #include "adapters/db/PgUserRepository.h"
 
-namespace fitapp::db {
+namespace kinetiq::db {
 
 namespace {
 
-fitapp::domain::User rowToUser(const pqxx::row& row) {
-    fitapp::domain::User user;
+kinetiq::domain::User rowToUser(const pqxx::row& row) {
+    kinetiq::domain::User user;
     user.id = row["id"].as<long long>();
     user.email = row["email"].as<std::string>();
     user.passwordHash = row["password_hash"].as<std::string>();
@@ -15,25 +15,25 @@ fitapp::domain::User rowToUser(const pqxx::row& row) {
 
 }  // namespace
 
-fitapp::domain::User PgUserRepository::save(const fitapp::domain::User& user) {
+kinetiq::domain::User PgUserRepository::save(const kinetiq::domain::User& user) {
     try {
         const auto result = tx_.exec(
             "INSERT INTO users (email, password_hash, display_name) "
             "VALUES ($1, $2, $3) RETURNING id",
             pqxx::params{user.email, user.passwordHash, user.displayName});
 
-        fitapp::domain::User stored = user;
+        kinetiq::domain::User stored = user;
         stored.id = result[0][0].as<long long>();
         return stored;
     } catch (const pqxx::unique_violation&) {
         // Users.email is `citext` with a UNIQUE constraint -- Postgres itself
         // caught the duplicate. Translate its exception into the port's own,
         // so callers never need to know they're talking to Postgres.
-        throw fitapp::ports::DuplicateEmailError(user.email);
+        throw kinetiq::ports::DuplicateEmailError(user.email);
     }
 }
 
-std::optional<fitapp::domain::User> PgUserRepository::findByEmail(const std::string& email) {
+std::optional<kinetiq::domain::User> PgUserRepository::findByEmail(const std::string& email) {
     const auto result = tx_.exec(
         "SELECT id, email, password_hash, display_name FROM users WHERE email = $1",
         pqxx::params{email});
@@ -41,7 +41,7 @@ std::optional<fitapp::domain::User> PgUserRepository::findByEmail(const std::str
     return rowToUser(result[0]);
 }
 
-std::optional<fitapp::domain::User> PgUserRepository::findById(long long id) {
+std::optional<kinetiq::domain::User> PgUserRepository::findById(long long id) {
     const auto result = tx_.exec(
         "SELECT id, email, password_hash, display_name FROM users WHERE id = $1",
         pqxx::params{id});
@@ -49,14 +49,14 @@ std::optional<fitapp::domain::User> PgUserRepository::findById(long long id) {
     return rowToUser(result[0]);
 }
 
-void PgUserRepository::update(const fitapp::domain::User& user) {
+void PgUserRepository::update(const kinetiq::domain::User& user) {
     try {
         tx_.exec(
             "UPDATE users SET email = $1, password_hash = $2, display_name = $3 WHERE id = $4",
             pqxx::params{user.email, user.passwordHash, user.displayName, user.id});
     } catch (const pqxx::unique_violation&) {
-        throw fitapp::ports::DuplicateEmailError(user.email);
+        throw kinetiq::ports::DuplicateEmailError(user.email);
     }
 }
 
-}  // namespace fitapp::db
+}  // namespace kinetiq::db

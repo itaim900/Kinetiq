@@ -32,7 +32,7 @@ TEST(AuthDeps, JwtSignAndVerify) {
     const std::string secret = "test-secret-not-for-production";
 
     const auto token = jwt::create()
-                           .set_issuer("fitapp")
+                           .set_issuer("kinetiq")
                            .set_type("JWT")
                            .set_subject("42")
                            .sign(jwt::algorithm::hs256{secret});
@@ -40,14 +40,14 @@ TEST(AuthDeps, JwtSignAndVerify) {
     const auto decoded = jwt::decode(token);
     const auto verifier = jwt::verify()
                               .allow_algorithm(jwt::algorithm::hs256{secret})
-                              .with_issuer("fitapp");
+                              .with_issuer("kinetiq");
 
     EXPECT_NO_THROW(verifier.verify(decoded));
     EXPECT_EQ(decoded.get_subject(), "42");
 
     // A token signed with a different secret must fail verification.
     const auto forged = jwt::create()
-                            .set_issuer("fitapp")
+                            .set_issuer("kinetiq")
                             .set_subject("42")
                             .sign(jwt::algorithm::hs256{"wrong-secret"});
     EXPECT_THROW(verifier.verify(jwt::decode(forged)), std::exception);

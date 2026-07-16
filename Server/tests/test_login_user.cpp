@@ -13,13 +13,13 @@
 
 #include <chrono>
 
-using fitapp::app::InvalidCredentialsError;
-using fitapp::app::LoginUser;
-using fitapp::app::LoginUserRequest;
-using fitapp::crypto::Argon2PasswordHasher;
-using fitapp::crypto::JwtTokenService;
-using fitapp::domain::User;
-using fitapp::testsupport::InMemoryUserRepository;
+using kinetiq::app::InvalidCredentialsError;
+using kinetiq::app::LoginUser;
+using kinetiq::app::LoginUserRequest;
+using kinetiq::crypto::Argon2PasswordHasher;
+using kinetiq::crypto::JwtTokenService;
+using kinetiq::domain::User;
+using kinetiq::testsupport::InMemoryUserRepository;
 
 namespace {
 

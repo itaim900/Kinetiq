@@ -8,7 +8,7 @@
 
 #include <string>
 
-namespace fitapp::app {
+namespace kinetiq::app {
 
 struct ChangePasswordRequest {
     long long userId;
@@ -21,30 +21,30 @@ struct ChangePasswordRequest {
 // reset flow -- the caller already proves they know the current password.
 class ChangePassword {
 public:
-    ChangePassword(fitapp::ports::IUserRepository& users, fitapp::ports::IPasswordHasher& hasher)
+    ChangePassword(kinetiq::ports::IUserRepository& users, kinetiq::ports::IPasswordHasher& hasher)
         : users_(users), hasher_(hasher) {}
 
-    // Throws fitapp::domain::WeakPasswordError if the new password fails
+    // Throws kinetiq::domain::WeakPasswordError if the new password fails
     // the policy (checked first -- neither the repository nor the hasher's
     // verify step is touched before this), or InvalidCredentialsError if
     // the current password is wrong (reusing LoginUser's error type: same
     // "don't leak more than necessary" principle).
     void execute(const ChangePasswordRequest& request) {
-        fitapp::domain::requireStrongPassword(request.newPassword);
+        kinetiq::domain::requireStrongPassword(request.newPassword);
 
         const auto found = users_.findById(request.userId);
         if (!found.has_value() || !hasher_.verify(found->passwordHash, request.currentPassword)) {
             throw InvalidCredentialsError();
         }
 
-        fitapp::domain::User updated = *found;
+        kinetiq::domain::User updated = *found;
         updated.passwordHash = hasher_.hash(request.newPassword);
         users_.update(updated);
     }
 
 private:
-    fitapp::ports::IUserRepository& users_;
-    fitapp::ports::IPasswordHasher& hasher_;
+    kinetiq::ports::IUserRepository& users_;
+    kinetiq::ports::IPasswordHasher& hasher_;
 };
 
-}  // namespace fitapp::app
+}  // namespace kinetiq::app

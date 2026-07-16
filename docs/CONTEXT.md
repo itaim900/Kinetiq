@@ -1,4 +1,4 @@
-# Fit App — context brief (for humans & AI agents)
+# KinetiQ — context brief (for humans & AI agents)
 
 Dense summary to bring a new agent up to speed cheaply. For detail, follow the linked docs.
 
@@ -37,7 +37,7 @@ by `.github/workflows/images.yml`; full stack via `docker-compose.prod.yml`. Ver
 **Phase 2 (Core Domain) IN PROGRESS. Slice 0 "Foundations" COMPLETE & verified (2026-07-05, PR #40
 merged to `main`).** Hexagonal folders, argon2 + jwt-cpp wired (smoke tests green on MSYS2 + CI),
 startup migration runner, full v1 schema (`0002_core_schema.sql`), integration-test DB harness
-(separate `fitapp_test` DB + per-test transaction rollback). **In-process HTTP test harness**
+(separate `kinetiq_test` DB + per-test transaction rollback). **In-process HTTP test harness**
 (`tests/support/HttpClient.h`) added; testing architecture documented in `phase-2-plan.md` §8.
 
 **Slice 1 (Auth) IN PROGRESS (started 2026-07-12).** Issue #16 half-done: `domain::User` +
@@ -64,7 +64,7 @@ connection+transaction per call — a shared long-lived transaction isn't safe a
 multithreaded server's concurrent requests), and `main.cpp` fully wired (incl. a `JWT_SECRET` env
 var with a dev fallback that logs a warning when used). **Live-verified manually** against the
 real server + Postgres, not just tests: full register → login → me → change-password flow via
-curl, all correct. Auth deps promoted from `fitapp_tests`-only onto `fitapp_server` +
+curl, all correct. Auth deps promoted from `kinetiq_tests`-only onto `kinetiq_server` +
 `Server/Dockerfile` (Dockerfile package names **not build-verified locally** — this project never
 builds Docker images on the 8GB dev machine; CI is the real check). `#24`: Client auth UI —
 `RegisterForm`/`LoginForm`/`AuthPage` (Vitest + Testing Library + MSW, 22 tests), session
@@ -104,12 +104,12 @@ short viewports) via Playwright's actionability checks.
 - **Cross-platform linking:** Windows socket libs (`ws2_32`, etc.) linked only when `WIN32` in
   `CMakeLists.txt` so CI/Docker (Linux) builds succeed.
 - **libpqxx on Linux:** Ubuntu's `libpqxx-dev` 7.8.1 has a header/lib `std::source_location`
-  mismatch that breaks linking (even on C++17). CMake option **`FITAPP_FETCH_LIBPQXX=ON`** builds
+  mismatch that breaks linking (even on C++17). CMake option **`KINETIQ_FETCH_LIBPQXX=ON`** builds
   libpqxx from source (pinned **7.9.2**) for CI + Docker; local MSYS2 keeps the prebuilt (OFF).
 - **Images built in CI, not locally** — host only pulls + runs. Backend **`BIND_ADDR`** defaults to
   `127.0.0.1` (safe local dev); container sets `0.0.0.0` so the frontend nginx can reach it.
   **`DB_PASSWORD` is NOT baked into the image** — supplied at runtime by compose.
-- **`FITAPP_BUILD_TESTS=OFF`** in the Docker image build (no GoogleTest in the image); ON for local
+- **`KINETIQ_BUILD_TESTS=OFF`** in the Docker image build (no GoogleTest in the image); ON for local
   dev and CI.
 
 ## Container / CI layout
@@ -119,7 +119,7 @@ short viewports) via Playwright's actionability checks.
 | `docker-compose.prod.yml` | Prod-like: postgres + backend + client containers (app on **localhost:3000**) |
 | `Server/Dockerfile` | Multi-stage: Ubuntu build (FetchContent libpqxx) → slim runtime |
 | `Client/Dockerfile` + `nginx.conf` | Multi-stage: Node build → nginx serves static + proxies `/api` → `backend:8080` |
-| `.github/workflows/ci.yml` | Build + test backend (with `FITAPP_FETCH_LIBPQXX=ON`; **Postgres service** for integration tests) and frontend |
+| `.github/workflows/ci.yml` | Build + test backend (with `KINETIQ_FETCH_LIBPQXX=ON`; **Postgres service** for integration tests) and frontend |
 | `.github/workflows/images.yml` | Build + push to GHCR on push to `main` |
 
 Migrations are **shipped inside the backend image** (`/app/migrations`, `MIGRATIONS_DIR`) and applied
@@ -130,7 +130,7 @@ by the server on startup; the Postgres `docker-entrypoint-initdb.d` mount was re
 The words "backend" / "frontend" still appear elsewhere as **role names**, not folder paths:
 - Docker Compose **service names** (`backend`, `frontend`) — how containers talk on the network
   (e.g. nginx proxies to `http://backend:8080`).
-- **GHCR image names** (`fit-app-backend`, `fit-app-frontend`) — already published; kept for compatibility.
+- **GHCR image names** (`kinetiq-backend`, `kinetiq-frontend`) — already published; kept for compatibility.
 - **CI job labels** and prose in docs ("build the backend").
 Do **not** recreate `backend/` or `frontend/` directories; put new code in `Server/` or `Client/`.
 Repo is **private**; **packages are PUBLIC** (pull needs no login).
@@ -185,7 +185,7 @@ port/fake → green → refactor.
   `DB_PORT` mismatch (was 5432 vs 5433 when native Postgres held 5432 — now fixed on default 5432). |
 | Server exits: `migrations failed, refusing to start` | Postgres not up yet — start `docker compose up -d`, wait for `healthy`, rerun Server. |
 | `docker` commands hang | Docker Desktop open but engine not ready — restart Docker Desktop / WSL. |
-| CI backend link error on Linux | Fixed by `FITAPP_FETCH_LIBPQXX=ON` (don't use Ubuntu `libpqxx-dev`). |
+| CI backend link error on Linux | Fixed by `KINETIQ_FETCH_LIBPQXX=ON` (don't use Ubuntu `libpqxx-dev`). |
 | Local Docker build OOM | Expected on 8 GB — use CI-built images instead. |
 
 ## Docs map (`docs/`)
@@ -202,13 +202,13 @@ port/fake → green → refactor.
   `session-log-phase1-spike.md`
 
 ## GitHub
-Repo `itaim900/Fit-App` (private). Backlog = **4 milestones** (Phase 0–3) + **38 issues** + labels.
-Actions: https://github.com/itaim900/Fit-App/actions
+Repo `itaim900/KinetiQ` (private). Backlog = **4 milestones** (Phase 0–3) + **38 issues** + labels.
+Actions: https://github.com/itaim900/KinetiQ/actions
 
 ## How to run
 See `docs/learning/how-to-run.md`. Two ways:
 - **Dev (fast iteration):** `docker compose up -d` (Postgres) → build & run server
-  (`cmake --preset default && cmake --build --preset default`, then `./build/fitapp_server.exe`
+  (`cmake --preset default && cmake --build --preset default`, then `./build/kinetiq_server.exe`
   from `Server/`) → `npm run dev` in `Client/` → open **localhost:5173**.
 - **Whole app via containers:** `docker compose -f docker-compose.prod.yml pull && up -d` → open
   **localhost:3000**. Requires GHCR packages public, or `docker login ghcr.io` with `read:packages`.

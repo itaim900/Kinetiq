@@ -6,23 +6,23 @@
 #include <exception>
 #include <iostream>
 
-#ifndef FITAPP_MIGRATIONS_DIR
-#error "FITAPP_MIGRATIONS_DIR must be defined by the build (path to Server/migrations)"
+#ifndef KINETIQ_MIGRATIONS_DIR
+#error "KINETIQ_MIGRATIONS_DIR must be defined by the build (path to Server/migrations)"
 #endif
 
-namespace fitapp::testing {
+namespace kinetiq::testing {
 
 namespace {
 
 std::string connStringForDb(const std::string& dbname) {
-    return "host=" + fitapp::envOr("DB_HOST", "127.0.0.1") +
-           " port=" + fitapp::envOr("DB_PORT", "5432") +
-           " user=" + fitapp::envOr("DB_USER", "fitapp") +
-           " password=" + fitapp::envOr("DB_PASSWORD", "fitapp") +
+    return "host=" + kinetiq::envOr("DB_HOST", "127.0.0.1") +
+           " port=" + kinetiq::envOr("DB_PORT", "5432") +
+           " user=" + kinetiq::envOr("DB_USER", "kinetiq") +
+           " password=" + kinetiq::envOr("DB_PASSWORD", "kinetiq") +
            " dbname=" + dbname;
 }
 
-std::string testDbName() { return fitapp::envOr("TEST_DB_NAME", "fitapp_test"); }
+std::string testDbName() { return kinetiq::envOr("TEST_DB_NAME", "kinetiq_test"); }
 
 }  // namespace
 
@@ -51,7 +51,7 @@ bool ensureTestDatabaseReady() {
     // Apply migrations to the test DB (idempotent).
     try {
         pqxx::connection conn(testConnString());
-        fitapp::db::Migrator migrator(conn, FITAPP_MIGRATIONS_DIR);
+        kinetiq::db::Migrator migrator(conn, KINETIQ_MIGRATIONS_DIR);
         migrator.run();
     } catch (const std::exception& e) {
         std::cerr << "[testdb] migrating test DB failed: " << e.what() << std::endl;
@@ -61,15 +61,15 @@ bool ensureTestDatabaseReady() {
     return true;
 }
 
-}  // namespace fitapp::testing
+}  // namespace kinetiq::testing
 
 std::unique_ptr<pqxx::connection> DbTest::conn_;
 bool DbTest::available_ = false;
 
 void DbTest::SetUpTestSuite() {
-    available_ = fitapp::testing::ensureTestDatabaseReady();
+    available_ = kinetiq::testing::ensureTestDatabaseReady();
     if (available_) {
-        conn_ = std::make_unique<pqxx::connection>(fitapp::testing::testConnString());
+        conn_ = std::make_unique<pqxx::connection>(kinetiq::testing::testConnString());
     }
 }
 

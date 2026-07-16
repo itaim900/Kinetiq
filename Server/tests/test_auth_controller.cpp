@@ -14,17 +14,17 @@
 
 #include <chrono>
 
-using fitapp::crypto::Argon2PasswordHasher;
-using fitapp::crypto::JwtTokenService;
-using fitapp::testsupport::InMemoryUserRepository;
+using kinetiq::crypto::Argon2PasswordHasher;
+using kinetiq::crypto::JwtTokenService;
+using kinetiq::testsupport::InMemoryUserRepository;
 
 TEST(AuthControllerTest, Register_ValidRequest_Returns201WithUserAndToken) {
     crow::SimpleApp app;
     InMemoryUserRepository users;
     Argon2PasswordHasher hasher;
     JwtTokenService tokens("test-secret", std::chrono::seconds(3600));
-    fitapp::http::registerAuthRoutes(app, users, hasher, tokens);
-    fitapp::testing::HttpClient client(app);
+    kinetiq::http::registerAuthRoutes(app, users, hasher, tokens);
+    kinetiq::testing::HttpClient client(app);
 
     const auto r = client.post(
         "/api/v1/auth/register",
@@ -46,8 +46,8 @@ TEST(AuthControllerTest, Register_WeakPassword_Returns422) {
     InMemoryUserRepository users;
     Argon2PasswordHasher hasher;
     JwtTokenService tokens("test-secret", std::chrono::seconds(3600));
-    fitapp::http::registerAuthRoutes(app, users, hasher, tokens);
-    fitapp::testing::HttpClient client(app);
+    kinetiq::http::registerAuthRoutes(app, users, hasher, tokens);
+    kinetiq::testing::HttpClient client(app);
 
     const auto r = client.post(
         "/api/v1/auth/register",
@@ -62,8 +62,8 @@ TEST(AuthControllerTest, Register_DuplicateEmail_Returns409) {
     InMemoryUserRepository users;
     Argon2PasswordHasher hasher;
     JwtTokenService tokens("test-secret", std::chrono::seconds(3600));
-    fitapp::http::registerAuthRoutes(app, users, hasher, tokens);
-    fitapp::testing::HttpClient client(app);
+    kinetiq::http::registerAuthRoutes(app, users, hasher, tokens);
+    kinetiq::testing::HttpClient client(app);
 
     const std::string requestBody =
         R"({"email":"mona@example.com","password":"StrongPass1","display_name":"Mona"})";
@@ -80,8 +80,8 @@ TEST(AuthControllerTest, Register_MissingRequiredField_Returns422) {
     InMemoryUserRepository users;
     Argon2PasswordHasher hasher;
     JwtTokenService tokens("test-secret", std::chrono::seconds(3600));
-    fitapp::http::registerAuthRoutes(app, users, hasher, tokens);
-    fitapp::testing::HttpClient client(app);
+    kinetiq::http::registerAuthRoutes(app, users, hasher, tokens);
+    kinetiq::testing::HttpClient client(app);
 
     const auto r = client.post("/api/v1/auth/register",
                                 R"({"email":"nina@example.com","display_name":"Nina"})");
@@ -94,8 +94,8 @@ TEST(AuthControllerTest, Login_CorrectCredentials_Returns200WithUserAndToken) {
     InMemoryUserRepository users;
     Argon2PasswordHasher hasher;
     JwtTokenService tokens("test-secret", std::chrono::seconds(3600));
-    fitapp::http::registerAuthRoutes(app, users, hasher, tokens);
-    fitapp::testing::HttpClient client(app);
+    kinetiq::http::registerAuthRoutes(app, users, hasher, tokens);
+    kinetiq::testing::HttpClient client(app);
 
     client.post("/api/v1/auth/register",
                  R"({"email":"oscar@example.com","password":"StrongPass1","display_name":"Oscar"})");
@@ -117,8 +117,8 @@ TEST(AuthControllerTest, Login_WrongPassword_Returns401) {
     InMemoryUserRepository users;
     Argon2PasswordHasher hasher;
     JwtTokenService tokens("test-secret", std::chrono::seconds(3600));
-    fitapp::http::registerAuthRoutes(app, users, hasher, tokens);
-    fitapp::testing::HttpClient client(app);
+    kinetiq::http::registerAuthRoutes(app, users, hasher, tokens);
+    kinetiq::testing::HttpClient client(app);
 
     client.post("/api/v1/auth/register",
                  R"({"email":"paula@example.com","password":"StrongPass1","display_name":"Paula"})");
@@ -133,8 +133,8 @@ TEST(AuthControllerTest, Login_UnknownEmail_Returns401) {
     InMemoryUserRepository users;
     Argon2PasswordHasher hasher;
     JwtTokenService tokens("test-secret", std::chrono::seconds(3600));
-    fitapp::http::registerAuthRoutes(app, users, hasher, tokens);
-    fitapp::testing::HttpClient client(app);
+    kinetiq::http::registerAuthRoutes(app, users, hasher, tokens);
+    kinetiq::testing::HttpClient client(app);
 
     const auto r = client.post("/api/v1/auth/login",
                                 R"({"email":"nobody@example.com","password":"WhateverPass1"})");
@@ -146,8 +146,8 @@ TEST(AuthControllerTest, Me_ValidToken_Returns200WithUserProfile) {
     InMemoryUserRepository users;
     Argon2PasswordHasher hasher;
     JwtTokenService tokens("test-secret", std::chrono::seconds(3600));
-    fitapp::http::registerAuthRoutes(app, users, hasher, tokens);
-    fitapp::testing::HttpClient client(app);
+    kinetiq::http::registerAuthRoutes(app, users, hasher, tokens);
+    kinetiq::testing::HttpClient client(app);
 
     const auto registerBody = crow::json::load(
         client
@@ -172,8 +172,8 @@ TEST(AuthControllerTest, Me_MissingToken_Returns401) {
     InMemoryUserRepository users;
     Argon2PasswordHasher hasher;
     JwtTokenService tokens("test-secret", std::chrono::seconds(3600));
-    fitapp::http::registerAuthRoutes(app, users, hasher, tokens);
-    fitapp::testing::HttpClient client(app);
+    kinetiq::http::registerAuthRoutes(app, users, hasher, tokens);
+    kinetiq::testing::HttpClient client(app);
 
     EXPECT_EQ(client.get("/api/v1/auth/me").code, 401);
 }
@@ -183,8 +183,8 @@ TEST(AuthControllerTest, Me_InvalidToken_Returns401) {
     InMemoryUserRepository users;
     Argon2PasswordHasher hasher;
     JwtTokenService tokens("test-secret", std::chrono::seconds(3600));
-    fitapp::http::registerAuthRoutes(app, users, hasher, tokens);
-    fitapp::testing::HttpClient client(app);
+    kinetiq::http::registerAuthRoutes(app, users, hasher, tokens);
+    kinetiq::testing::HttpClient client(app);
 
     const auto r =
         client.get("/api/v1/auth/me", {{"Authorization", "Bearer garbage-token"}});
@@ -197,7 +197,7 @@ namespace {
 // token, so each test doesn't repeat the same register+extract dance.
 // HttpClient is templated on the Crow app type, so this helper is too.
 template <typename App>
-std::string registerAndGetToken(fitapp::testing::HttpClient<App>& client, const std::string& email,
+std::string registerAndGetToken(kinetiq::testing::HttpClient<App>& client, const std::string& email,
                                  const std::string& password) {
     const auto body = crow::json::load(
         client
@@ -215,8 +215,8 @@ TEST(AuthControllerTest, ChangePassword_ValidRequest_Returns200AndNewPasswordWor
     InMemoryUserRepository users;
     Argon2PasswordHasher hasher;
     JwtTokenService tokens("test-secret", std::chrono::seconds(3600));
-    fitapp::http::registerAuthRoutes(app, users, hasher, tokens);
-    fitapp::testing::HttpClient client(app);
+    kinetiq::http::registerAuthRoutes(app, users, hasher, tokens);
+    kinetiq::testing::HttpClient client(app);
 
     const std::string token = registerAndGetToken(client, "rita@example.com", "OldPass1");
 
@@ -242,8 +242,8 @@ TEST(AuthControllerTest, ChangePassword_WrongCurrentPassword_Returns401) {
     InMemoryUserRepository users;
     Argon2PasswordHasher hasher;
     JwtTokenService tokens("test-secret", std::chrono::seconds(3600));
-    fitapp::http::registerAuthRoutes(app, users, hasher, tokens);
-    fitapp::testing::HttpClient client(app);
+    kinetiq::http::registerAuthRoutes(app, users, hasher, tokens);
+    kinetiq::testing::HttpClient client(app);
 
     const std::string token = registerAndGetToken(client, "sam@example.com", "OldPass1");
 
@@ -259,8 +259,8 @@ TEST(AuthControllerTest, ChangePassword_WeakNewPassword_Returns422) {
     InMemoryUserRepository users;
     Argon2PasswordHasher hasher;
     JwtTokenService tokens("test-secret", std::chrono::seconds(3600));
-    fitapp::http::registerAuthRoutes(app, users, hasher, tokens);
-    fitapp::testing::HttpClient client(app);
+    kinetiq::http::registerAuthRoutes(app, users, hasher, tokens);
+    kinetiq::testing::HttpClient client(app);
 
     const std::string token = registerAndGetToken(client, "tina@example.com", "OldPass1");
 
@@ -275,8 +275,8 @@ TEST(AuthControllerTest, ChangePassword_Unauthenticated_Returns401) {
     InMemoryUserRepository users;
     Argon2PasswordHasher hasher;
     JwtTokenService tokens("test-secret", std::chrono::seconds(3600));
-    fitapp::http::registerAuthRoutes(app, users, hasher, tokens);
-    fitapp::testing::HttpClient client(app);
+    kinetiq::http::registerAuthRoutes(app, users, hasher, tokens);
+    kinetiq::testing::HttpClient client(app);
 
     const auto r =
         client.send(crow::HTTPMethod::Patch, "/api/v1/auth/password",

@@ -8,31 +8,31 @@
 #include <string>
 #include <unordered_map>
 
-namespace fitapp::testsupport {
+namespace kinetiq::testsupport {
 
-// Hand-written in-memory fake for fitapp::ports::IUserRepository, used in
+// Hand-written in-memory fake for kinetiq::ports::IUserRepository, used in
 // unit/HTTP-in-process tests in place of PgUserRepository. No gmock -- see
 // docs/phase-2-plan.md §8 (Testing architecture).
-class InMemoryUserRepository : public fitapp::ports::IUserRepository {
+class InMemoryUserRepository : public kinetiq::ports::IUserRepository {
 public:
-    fitapp::domain::User save(const fitapp::domain::User& user) override {
+    kinetiq::domain::User save(const kinetiq::domain::User& user) override {
         const std::string key = toLower(user.email);
         if (byEmail_.contains(key)) {
-            throw fitapp::ports::DuplicateEmailError(user.email);
+            throw kinetiq::ports::DuplicateEmailError(user.email);
         }
-        fitapp::domain::User stored = user;
+        kinetiq::domain::User stored = user;
         stored.id = nextId_++;
         byEmail_.emplace(key, stored);
         return stored;
     }
 
-    std::optional<fitapp::domain::User> findByEmail(const std::string& email) override {
+    std::optional<kinetiq::domain::User> findByEmail(const std::string& email) override {
         const auto it = byEmail_.find(toLower(email));
         if (it == byEmail_.end()) return std::nullopt;
         return it->second;
     }
 
-    std::optional<fitapp::domain::User> findById(long long id) override {
+    std::optional<kinetiq::domain::User> findById(long long id) override {
         // No secondary index by id -- a linear scan is fine for a test
         // fake's tiny datasets. Correctness over cleverness here.
         for (const auto& [key, user] : byEmail_) {
@@ -41,7 +41,7 @@ public:
         return std::nullopt;
     }
 
-    void update(const fitapp::domain::User& user) override {
+    void update(const kinetiq::domain::User& user) override {
         for (auto it = byEmail_.begin(); it != byEmail_.end(); ++it) {
             if (it->second.id != user.id) continue;
 
@@ -66,8 +66,8 @@ private:
         return out;
     }
 
-    std::unordered_map<std::string, fitapp::domain::User> byEmail_;
+    std::unordered_map<std::string, kinetiq::domain::User> byEmail_;
     long long nextId_ = 1;
 };
 
-}  // namespace fitapp::testsupport
+}  // namespace kinetiq::testsupport

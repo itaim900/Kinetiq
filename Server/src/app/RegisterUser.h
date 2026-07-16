@@ -8,7 +8,7 @@
 
 #include <string>
 
-namespace fitapp::app {
+namespace kinetiq::app {
 
 struct RegisterUserRequest {
     std::string email;
@@ -17,7 +17,7 @@ struct RegisterUserRequest {
 };
 
 struct RegisterUserResult {
-    fitapp::domain::User user;
+    kinetiq::domain::User user;
     std::string accessToken;
 };
 
@@ -27,32 +27,32 @@ struct RegisterUserResult {
 // IUserRepository/IPasswordHasher/ITokenService implementation to inject.
 class RegisterUser {
 public:
-    RegisterUser(fitapp::ports::IUserRepository& users, fitapp::ports::IPasswordHasher& hasher,
-                 fitapp::ports::ITokenService& tokens)
+    RegisterUser(kinetiq::ports::IUserRepository& users, kinetiq::ports::IPasswordHasher& hasher,
+                 kinetiq::ports::ITokenService& tokens)
         : users_(users), hasher_(hasher), tokens_(tokens) {}
 
-    // Throws fitapp::domain::WeakPasswordError if the password fails the
-    // strength policy, or fitapp::ports::DuplicateEmailError if the email is
+    // Throws kinetiq::domain::WeakPasswordError if the password fails the
+    // strength policy, or kinetiq::ports::DuplicateEmailError if the email is
     // already registered (propagated straight from the repository). Either
     // way, nothing is hashed or persisted before the throw.
     RegisterUserResult execute(const RegisterUserRequest& request) {
-        fitapp::domain::requireStrongPassword(request.password);
+        kinetiq::domain::requireStrongPassword(request.password);
 
-        fitapp::domain::User user;
+        kinetiq::domain::User user;
         user.email = request.email;
         user.displayName = request.displayName;
         user.passwordHash = hasher_.hash(request.password);
 
-        const fitapp::domain::User saved = users_.save(user);
+        const kinetiq::domain::User saved = users_.save(user);
         const std::string token = tokens_.issue(saved.id);
 
         return RegisterUserResult{saved, token};
     }
 
 private:
-    fitapp::ports::IUserRepository& users_;
-    fitapp::ports::IPasswordHasher& hasher_;
-    fitapp::ports::ITokenService& tokens_;
+    kinetiq::ports::IUserRepository& users_;
+    kinetiq::ports::IPasswordHasher& hasher_;
+    kinetiq::ports::ITokenService& tokens_;
 };
 
-}  // namespace fitapp::app
+}  // namespace kinetiq::app

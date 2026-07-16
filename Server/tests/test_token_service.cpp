@@ -9,7 +9,7 @@
 
 #include <chrono>
 
-using fitapp::crypto::JwtTokenService;
+using kinetiq::crypto::JwtTokenService;
 
 TEST(JwtTokenServiceTest, IssueThenVerify_ReturnsSameUserId) {
     JwtTokenService tokens("test-secret", std::chrono::seconds(3600));

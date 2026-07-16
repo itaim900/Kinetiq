@@ -80,7 +80,7 @@ The groundwork every later slice needs. Detailed breakdown in §6.
 - `domain::PasswordPolicy` — min 8 chars + ≥1 uppercase. ✅ done 2026-07-12.
 - `IPasswordHasher`/`Argon2PasswordHasher`; `ITokenService`/`JwtTokenService` (HS256, 24h expiry —
   locked decision, no refresh tokens in v1); auth **authenticator function** (not Crow middleware
-  — see §8) → `CurrentUser`. Promoted onto `fitapp_server` + `Server/Dockerfile`. ✅ **#17
+  — see §8) → `CurrentUser`. Promoted onto `kinetiq_server` + `Server/Dockerfile`. ✅ **#17
   complete**, 2026-07-12.
 - `POST /auth/register`, `POST /auth/login`, `GET /auth/me`, **`PATCH /auth/password`** (change
   password while logged in — added to scope 2026-07-12, no new issue # yet, folds into #18). Built
@@ -184,7 +184,7 @@ in-memory fakes** (no gmock).
 **Harness pieces (built in Slice 0):**
 - `tests/support/HttpClient.h` — sends requests through a Crow app **in-process** (no socket) via
   `app.handle_full()`. Templated on the app type. Smoke-tested in `tests/test_http_harness.cpp`.
-- `tests/support/TestDb.h/.cpp` — the `DbTest` fixture (separate `fitapp_test` DB + per-test rollback).
+- `tests/support/TestDb.h/.cpp` — the `DbTest` fixture (separate `kinetiq_test` DB + per-test rollback).
 
 **⚠️ Crow middleware is NOT run by `handle_full()`** — it's wired by the socket `Connection`, and a
 route with route-local middleware would even dereference an uninitialized context under `handle_full`.

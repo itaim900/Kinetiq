@@ -63,12 +63,12 @@ For durable/architectural facts, also update `docs/CONTEXT.md` (and add an ADR w
   `authenticate()` function in `http/middleware/Authenticator.h` — deliberately a plain function,
   not Crow middleware, since `HttpClient`'s `handle_full()` doesn't run middleware. All 3 pieces
   TDD'd (red via failed compile, green on first implementation attempt each time).
-- Promoted auth deps from `fitapp_tests`-only onto `fitapp_server`: restructured `CMakeLists.txt`
-  (jwt-cpp `FetchContent` moved out from under `FITAPP_BUILD_TESTS`), updated `Server/Dockerfile`
+- Promoted auth deps from `kinetiq_tests`-only onto `kinetiq_server`: restructured `CMakeLists.txt`
+  (jwt-cpp `FetchContent` moved out from under `KINETIQ_BUILD_TESTS`), updated `Server/Dockerfile`
   (build stage already had the dev packages via CI; runtime stage needed `libargon2-1` + `libssl3`
   added — **not build-verified locally**, this project never builds Docker images on the 8GB dev
   machine, so CI is the real check).
-- Hit one snag: first rebuild after the CMake change failed to *link* `fitapp_server.exe`
+- Hit one snag: first rebuild after the CMake change failed to *link* `kinetiq_server.exe`
   ("Permission denied") — a stale server process from earlier in the session (launched via
   `run-dev.ps1`, never stopped) still had the file open. Killed it, rebuilt clean.
 - `ctest` = **39/39** (was 27 at the start of this segment). **`#16` and `#17` are both complete.**
@@ -91,7 +91,7 @@ For durable/architectural facts, also update `docs/CONTEXT.md` (and add an ADR w
 - `ctest` = **27/27** (was 13 at session start).
 - Next: `#17` — argon2 password hasher + JWT issue/verify + authenticator function (deliberately
   **not** Crow middleware, since the in-process `HttpClient` test harness doesn't run it — see
-  `phase-2-plan.md` §8), then promote those deps from `fitapp_tests` onto `fitapp_server` +
+  `phase-2-plan.md` §8), then promote those deps from `kinetiq_tests` onto `kinetiq_server` +
   `Server/Dockerfile`.
 
 ## 2026-07-09 — VS Code

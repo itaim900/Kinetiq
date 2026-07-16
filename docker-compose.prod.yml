@@ -10,24 +10,24 @@
 services:
   postgres:
     image: postgres:16
-    container_name: fitapp-postgres
+    container_name: kinetiq-postgres
     environment:
-      POSTGRES_DB: fitapp
-      POSTGRES_USER: fitapp
-      POSTGRES_PASSWORD: fitapp
+      POSTGRES_DB: kinetiq
+      POSTGRES_USER: kinetiq
+      POSTGRES_PASSWORD: kinetiq
     volumes:
-      - fitapp_pgdata:/var/lib/postgresql/data
+      - kinetiq_pgdata:/var/lib/postgresql/data
       # No initdb.d mount: the backend applies migrations on startup (it ships
       # the SQL in its image and owns the schema).
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U fitapp -d fitapp"]
+      test: ["CMD-SHELL", "pg_isready -U kinetiq -d kinetiq"]
       interval: 5s
       timeout: 3s
       retries: 10
 
   backend:
-    image: ghcr.io/${IMAGE_OWNER:-itaim900}/fit-app-backend:latest
-    container_name: fitapp-backend
+    image: ghcr.io/${IMAGE_OWNER:-itaim900}/kinetiq-backend:latest
+    container_name: kinetiq-backend
     depends_on:
       postgres:
         condition: service_healthy
@@ -35,20 +35,20 @@ services:
       BIND_ADDR: 0.0.0.0
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: fitapp
-      DB_USER: fitapp
-      DB_PASSWORD: fitapp
+      DB_NAME: kinetiq
+      DB_USER: kinetiq
+      DB_PASSWORD: kinetiq
     ports:
       # Exposed for convenience (e.g. curl /api/v1/health directly). Optional.
       - "8080:8080"
 
   frontend:
-    image: ghcr.io/${IMAGE_OWNER:-itaim900}/fit-app-frontend:latest
-    container_name: fitapp-frontend
+    image: ghcr.io/${IMAGE_OWNER:-itaim900}/kinetiq-frontend:latest
+    container_name: kinetiq-frontend
     depends_on:
       - backend
     ports:
       - "3000:80"
 
 volumes:
-  fitapp_pgdata:
+  kinetiq_pgdata:

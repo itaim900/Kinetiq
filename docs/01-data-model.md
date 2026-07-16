@@ -1,4 +1,4 @@
-# Data Model — Fit App
+# Data Model — KinetiQ
 
 **Status:** Approved (design phase)
 **Last updated:** 2026-06-23

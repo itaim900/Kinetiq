@@ -2,7 +2,7 @@
 // 24h JWT expiry is meant to mean "log in once a day," which only holds if
 // the token survives a page refresh -- in-memory storage would force a
 // re-login on every refresh, quietly defeating that choice.
-const STORAGE_KEY = 'fitapp_access_token';
+const STORAGE_KEY = 'kinetiq_access_token';
 
 export function saveToken(token: string): void {
   localStorage.setItem(STORAGE_KEY, token);

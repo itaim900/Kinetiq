@@ -6,7 +6,7 @@
 #include <utility>
 #include <vector>
 
-namespace fitapp::testing {
+namespace kinetiq::testing {
 
 struct TestResponse {
     int code = 0;
@@ -63,4 +63,4 @@ private:
     App& app_;
 };
 
-}  // namespace fitapp::testing
+}  // namespace kinetiq::testing

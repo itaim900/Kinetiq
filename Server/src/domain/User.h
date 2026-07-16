@@ -2,7 +2,7 @@
 
 #include <string>
 
-namespace fitapp::domain {
+namespace kinetiq::domain {
 
 // Mirrors the subset of the Users table that auth needs. Deliberately not the
 // full profile (biometrics etc. arrive in Slice 2) -- keep this narrow.
@@ -13,4 +13,4 @@ struct User {
     std::string displayName;
 };
 
-}  // namespace fitapp::domain
+}  // namespace kinetiq::domain

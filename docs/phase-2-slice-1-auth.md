@@ -21,7 +21,7 @@ the slice progresses, don't wait until it's done.
 - [x] `IPasswordHasher` port + `Argon2PasswordHasher` adapter — 2026-07-12
 - [x] `ITokenService` port + `JwtTokenService` adapter, 24h expiry — 2026-07-12
 - [x] Authenticator function (`Authorization: Bearer` → `CurrentUser` or `nullopt`) — 2026-07-12
-- [x] Promoted auth deps from `fitapp_tests`-only to `fitapp_server` + `Server/Dockerfile` —
+- [x] Promoted auth deps from `kinetiq_tests`-only to `kinetiq_server` + `Server/Dockerfile` —
   2026-07-12. **#17 complete.**
 - [x] `app::RegisterUser` service (happy path, weak password, duplicate email) — 2026-07-16.
 - [x] `app::LoginUser` service (happy path, wrong password, unknown email) — 2026-07-16.
@@ -234,7 +234,7 @@ running Postgres, unlike everything before it.
    issue time is all that's needed; no separate expiry-check call.
 3. Built — **red**: `fatal error: ... JwtTokenService.h: No such file or directory`.
 4. Wrote `Server/src/ports/ITokenService.h` and `Server/src/adapters/crypto/JwtTokenService.{h,cpp}`
-   — HS256, issuer `"fitapp"`, subject = user id, TTL as a constructor parameter (not hardcoded)
+   — HS256, issuer `"kinetiq"`, subject = user id, TTL as a constructor parameter (not hardcoded)
    so tests can control it.
 5. Built + ran — **green**, 4/4 on the first attempt.
 
@@ -249,18 +249,18 @@ running Postgres, unlike everything before it.
    that folder.
 4. Built + ran — **green**, 5/5 on the first attempt.
 
-### Step 9 — Promote auth deps to `fitapp_server` (2026-07-12)
+### Step 9 — Promote auth deps to `kinetiq_server` (2026-07-12)
 Restructured `CMakeLists.txt`: moved the jwt-cpp `FetchContent` block out from under
-`FITAPP_BUILD_TESTS` (so it's available unconditionally), added `Argon2PasswordHasher.cpp` +
-`JwtTokenService.cpp` to `fitapp_server`'s sources, and called `fitapp_add_auth_deps(fitapp_server)`.
+`KINETIQ_BUILD_TESTS` (so it's available unconditionally), added `Argon2PasswordHasher.cpp` +
+`JwtTokenService.cpp` to `kinetiq_server`'s sources, and called `kinetiq_add_auth_deps(kinetiq_server)`.
 Hit one snag: the very first rebuild failed to *link* (not compile) with "Permission denied" — a
-stale `fitapp_server.exe` from earlier in the session (started via `run-dev.ps1`, never stopped)
+stale `kinetiq_server.exe` from earlier in the session (started via `run-dev.ps1`, never stopped)
 still had the file open. Killed it, rebuilt clean.
 
 Updated `Server/Dockerfile`'s runtime stage to install `libargon2-1` + `libssl3` (the build stage
 already needed `libargon2-dev` + `libssl-dev`, which CI's Ubuntu job already had from Slice 0).
 **Not verified by a local build** — this project never builds Docker images locally (8GB RAM
-constraint) — CI is the real check, same situation as the earlier libpqxx/`FITAPP_FETCH_LIBPQXX`
+constraint) — CI is the real check, same situation as the earlier libpqxx/`KINETIQ_FETCH_LIBPQXX`
 packaging issue.
 
 Full suite after all of #17: **39/39** (27 previous + 12 new). **`#17` is now complete.**
@@ -342,7 +342,7 @@ grow as new use cases demand it.
    (real, `DbTest`-based): `findById` returns the user, `findById` on an unknown id returns
    `nullopt`, `update` changes the stored fields (and `findByEmail` reflects the change too, not
    just `findById` -- proving the fake's dual-lookup stays consistent after a mutation).
-2. Built — **red**: `'class fitapp::db::PgUserRepository' has no member named 'findById'`.
+2. Built — **red**: `'class kinetiq::db::PgUserRepository' has no member named 'findById'`.
 3. Added `findById`/`update` to `ports/IUserRepository.h`. Implemented in
    `InMemoryUserRepository` (linear scan by id -- fine for a fake's tiny datasets; `update()`
    re-keys the map if the email changed, matching what a real `UPDATE` would do even though no
@@ -375,7 +375,7 @@ check) — verified `crow::json::load`'s exact `rvalue` API (`operator[]`, `.s()
 discipline as verifying the argon2 C API back in Step 6.
 
 1. Wrote `Server/tests/test_auth_controller.cpp`, one happy-path case, driving
-   `fitapp::http::registerAuthRoutes(app, users, hasher, tokens)` through `HttpClient` — a function
+   `kinetiq::http::registerAuthRoutes(app, users, hasher, tokens)` through `HttpClient` — a function
    that didn't exist yet.
 2. Built — **red** (CMake-level, like Step 5: `add_executable` couldn't find
    `AuthController.cpp`, which didn't exist at all yet).
@@ -421,7 +421,7 @@ forge a valid login token for any user). Constructed `AutoCommitPgUserRepository
 `hasher`, `tokens` all share `main()`'s stack frame and `app.run()` blocks for the server's entire
 lifetime, so the captured references never dangle.
 
-Built both `fitapp_server` and `fitapp_tests` clean. Then **live-verified manually** against the
+Built both `kinetiq_server` and `kinetiq_tests` clean. Then **live-verified manually** against the
 real running server and real Postgres (not just tests): started the server via
 `scripts/run-dev.ps1`, confirmed the `JWT_SECRET` warning fired, then `curl`'d the full flow —
 register → login (right + wrong password) → `/me` (with + without token) → change password →
@@ -496,7 +496,7 @@ where a manual glance at a tall viewport wouldn't have caught it. Fixed by scopi
 | `Server/tests/test_token_service.cpp` | 4 tests |
 | `Server/src/http/middleware/Authenticator.h` | `authenticate()` fn + `CurrentUser` (not Crow middleware) |
 | `Server/tests/test_authenticator.cpp` | 5 tests |
-| `Server/CMakeLists.txt` | Registered all new files; promoted auth deps onto `fitapp_server` |
+| `Server/CMakeLists.txt` | Registered all new files; promoted auth deps onto `kinetiq_server` |
 | `Server/Dockerfile` | Added argon2/OpenSSL dev + runtime packages |
 | `Server/src/app/RegisterUser.h` | First `app/` service: hash, save, issue token |
 | `Server/tests/test_register_user.cpp` | 3 tests (happy path, weak password, duplicate email) |
