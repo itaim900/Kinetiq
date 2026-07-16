@@ -1,7 +1,8 @@
 #pragma once
 
-#include <cctype>
 #include <algorithm>
+#include <cctype>
+#include <stdexcept>
 #include <string>
 
 namespace fitapp::domain {
@@ -15,6 +16,22 @@ inline bool isPasswordStrong(const std::string& password) {
     return std::any_of(password.begin(), password.end(), [](unsigned char c) {
         return std::isupper(c);
     });
+}
+
+// Thrown by requireStrongPassword() -- used wherever the policy is enforced
+// (RegisterUser now, ChangePassword later) so callers all fail the same way.
+class WeakPasswordError : public std::runtime_error {
+public:
+    WeakPasswordError() : std::runtime_error("password does not meet the strength policy") {}
+};
+
+// Throws WeakPasswordError if `password` fails isPasswordStrong(); does
+// nothing otherwise. A small helper so every caller doesn't repeat the same
+// if-then-throw.
+inline void requireStrongPassword(const std::string& password) {
+    if (!isPasswordStrong(password)) {
+        throw WeakPasswordError();
+    }
 }
 
 }  // namespace fitapp::domain

@@ -97,6 +97,8 @@ if(FITAPP_BUILD_TESTS)
         tests/test_password_hasher.cpp
         tests/test_token_service.cpp
         tests/test_authenticator.cpp
+        tests/test_register_user.cpp
+        tests/test_login_user.cpp
         tests/support/TestDb.cpp
         src/adapters/db/Migrator.cpp
         src/adapters/db/PgUserRepository.cpp

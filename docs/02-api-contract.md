@@ -79,6 +79,14 @@ Test cases:
 - ❌ wrong password → `401`, generic message (never reveal if the email exists)
 - ❌ unknown email → `401`, identical message
 
+**Known v1 limitation (2026-07-16, deliberate, not a bug):** the identical error *message* doesn't
+fully close the no-enumeration goal — `LoginUser` short-circuits before hashing when the email
+isn't found, so an unknown email responds measurably faster (~0ms) than a wrong password (~200ms+,
+argon2's cost). A patient attacker could use response timing, not the message, to tell the two
+apart. Accepted for v1 given this app's threat model (not a high-value target); the standard fix
+is a dummy `verify()` call on the unknown-email path so both take similar time — revisit if that
+threat model ever changes.
+
 ### `GET /auth/me` 🔒
 Response `200`: current user profile.
 

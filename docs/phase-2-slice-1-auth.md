@@ -23,6 +23,8 @@ the slice progresses, don't wait until it's done.
 - [x] Authenticator function (`Authorization: Bearer` → `CurrentUser` or `nullopt`) — 2026-07-12
 - [x] Promoted auth deps from `fitapp_tests`-only to `fitapp_server` + `Server/Dockerfile` —
   2026-07-12. **#17 complete.**
+- [x] `app::RegisterUser` service (happy path, weak password, duplicate email) — 2026-07-16.
+- [x] `app::LoginUser` service (happy path, wrong password, unknown email) — 2026-07-16.
 - [ ] `POST /auth/register` (handler + DTOs + HTTP tests) — #18
 - [ ] `POST /auth/login` (handler + DTOs + HTTP tests) — #18
 - [ ] `GET /auth/me` (handler + HTTP tests) — #18
@@ -74,6 +76,32 @@ exercise expiry synchronously.
 No email infra needed — the user is already authenticated, submits current + new password, the
 service re-verifies and re-hashes. New endpoint: `PATCH /auth/password` 🔒. Full spec + test
 cases in `02-api-contract.md`.
+
+### 2026-07-16 — Validation order in `app/` services: cheap/local checks before expensive/side-effecting ones
+`RegisterUser::execute()` calls `requireStrongPassword()` as its very first line, before hashing
+or touching the repository. This is a **guard clause**: validate preconditions immediately and
+bail out before anything downstream runs, rather than validating after the fact and having to
+undo work. Concretely, it means a rejected weak-password request costs ~0ms instead of paying
+argon2's deliberate ~200ms–1.5s hashing cost for input we're about to throw away — proven by the
+test itself running in 0ms vs. the happy path's 271ms. Generalizes forward: the same reasoning
+means the *duplicate-email* check (next TDD loop) should probably also happen before hashing, not
+after — currently `save()` only discovers the duplicate at the very end, after a strong password
+has already paid the full hashing cost. Decide explicitly when building that step rather than
+leaving the order accidental. (Resolved 2026-07-16: kept as-is, letting `DuplicateEmailError`
+propagate from `save()` unchanged — see Step 10 below.)
+
+### 2026-07-16 — Login timing side-channel: accepted as a known v1 limitation
+`LoginUser`'s wrong-password and unknown-email cases return an identical error *message* (per the
+earlier no-enumeration decision), but not identical *timing* — the unknown-email path
+short-circuits before ever calling the hasher, so it responds in ~0ms vs. wrong-password's
+~200ms+ (argon2's real cost). This was discovered empirically, not just reasoned about: the actual
+test run showed `WrongPassword_ThrowsInvalidCredentials` at 224ms and
+`UnknownEmail_ThrowsInvalidCredentials` at 0ms. The standard fix (always call `verify()` against a
+dummy hash, generated via the real hasher rather than hand-crafted, so both paths cost the same)
+was considered and explicitly **deferred** — this app isn't a high-value target, and exploiting a
+timing channel needs many precise measurements for a low-value payoff here. Documented in
+`02-api-contract.md` under `POST /auth/login` as a deliberate gap, not an oversight; revisit if
+the threat model ever changes.
 
 ---
 
@@ -186,6 +214,73 @@ packaging issue.
 
 Full suite after all of #17: **39/39** (27 previous + 12 new). **`#17` is now complete.**
 
+### Step 10 — `app::RegisterUser` (2026-07-16, TDD loops 7 & 8)
+The first `app/` service — orchestrates everything Slice 1 has built so far. Done as two small,
+separately-committed-to-history TDD loops rather than one big one, per owner preference to go
+slowly through #18.
+
+**Loop 7 — happy path:**
+1. Wrote `Server/tests/test_register_user.cpp` with one case (valid request → user created,
+   token issued, verifiable) against `app/RegisterUser.h`, which didn't exist yet. Test injects
+   real `Argon2PasswordHasher` + `JwtTokenService` + fake `InMemoryUserRepository` through their
+   *port* types — deliberately no fakes for hasher/tokens yet, since with only one test the ~230ms
+   argon2 cost isn't worth avoiding. Revisit once test count makes it hurt.
+2. Built — **red**: `fatal error: app/RegisterUser.h: No such file or directory`.
+3. Wrote `Server/src/app/RegisterUser.h`: constructor takes `IUserRepository&`/`IPasswordHasher&`/
+   `ITokenService&` (ports, never concrete adapters, per `app/README.md`). `execute()` hashes,
+   saves, issues a token, returns both. Doesn't catch anything itself — errors (e.g.
+   `DuplicateEmailError`) propagate straight through; translating exceptions into HTTP status codes
+   is the controller's job, not the service's.
+4. Built + ran — **green**, first attempt. Asserted a real security property along the way:
+   `result.user.passwordHash != "StrongPass1"` (the plaintext never gets stored as-is).
+
+**Loop 8 — weak password rejected:**
+1. Added a test asserting a 5-char password throws `domain::WeakPasswordError` *and* that nothing
+   was persisted (`users.findByEmail(...)` still empty afterward).
+2. Built — **red**: compile error, `WeakPasswordError` didn't exist as a type yet.
+3. Added `WeakPasswordError` + a `requireStrongPassword()` helper to `domain/PasswordPolicy.h`
+   (not to `RegisterUser.h`) — deliberately placed next to the rule it enforces rather than next
+   to today's only caller, since `ChangePassword` will need to enforce the identical policy on its
+   `new_password` field soon. Called `requireStrongPassword()` as the very first line of
+   `execute()`, before hashing or touching the repository (a **guard clause** — see the 2026-07-16
+   decision above for why the ordering itself matters, not just that the check exists).
+4. Built + ran — **green**, first attempt. The weak-password test ran in **0ms** vs. the happy
+   path's 271ms — concrete proof it short-circuits before ever reaching the hasher.
+
+**Loop 9 — duplicate email:**
+1. Owner decision: keep the existing order (validate → hash → save) rather than moving the
+   duplicate-email check before hashing, even though the same "avoid wasted work" reasoning from
+   Loop 8 would apply.
+2. Added a test: register `carol@example.com`, then register it again with a different password
+   → expect `ports::DuplicateEmailError`.
+3. Built — **compiled and passed immediately, no production code changed.** `execute()` already
+   has no `try`/`catch` around `users_.save(user)`, so the repository's `DuplicateEmailError` was
+   already propagating untouched — this test *documents and regression-guards* existing behavior
+   rather than driving new code. Still a legitimate, valuable test: it fails if a future change
+   accidentally wraps `execute()` in a catch block that swallows the error.
+
+Full suite after `RegisterUser`: **42/42** (39 previous + 3 new).
+
+### Step 11 — `app::LoginUser` (2026-07-16, TDD loop 10)
+Unlike `RegisterUser`'s two separable checks, "find the user" and "check the password" are one
+cohesive operation here, so happy path + the failure case were built together as a single loop.
+
+1. Wrote `Server/tests/test_login_user.cpp`: correct credentials → user + token; wrong password →
+   throws; unknown email → throws — the **same exception type** (`InvalidCredentialsError`) for
+   both failure cases, deliberately, so nothing downstream can accidentally distinguish them (the
+   type system enforces the no-enumeration principle, not just careful coding).
+2. Built — **red**: `fatal error: app/LoginUser.h: No such file or directory`.
+3. Wrote `Server/src/app/LoginUser.h`: `if (!found.has_value() || !hasher_.verify(...))` — a
+   single branch, single throw, for both failure modes.
+4. Built + ran — **green**, first attempt (3/3). Full suite: **45/45**.
+5. **Discovered a real timing side-channel from the test's own output**, not from reasoning about
+   it in the abstract: `WrongPassword_ThrowsInvalidCredentials` took 224ms;
+   `UnknownEmail_ThrowsInvalidCredentials` took 0ms. Short-circuit evaluation means an unknown
+   email never reaches `hasher_.verify()`, so despite an identical error *message*, response
+   *timing* still reveals which failure occurred. Raised it, owner chose to **defer** rather than
+   add a dummy-hash `verify()` call — documented as a deliberate v1 limitation in
+   `02-api-contract.md` and the decision log above, not a bug.
+
 ---
 
 ## Files touched so far
@@ -210,15 +305,17 @@ Full suite after all of #17: **39/39** (27 previous + 12 new). **`#17` is now co
 | `Server/tests/test_authenticator.cpp` | 5 tests |
 | `Server/CMakeLists.txt` | Registered all new files; promoted auth deps onto `fitapp_server` |
 | `Server/Dockerfile` | Added argon2/OpenSSL dev + runtime packages |
+| `Server/src/app/RegisterUser.h` | First `app/` service: hash, save, issue token |
+| `Server/tests/test_register_user.cpp` | 3 tests (happy path, weak password, duplicate email) |
+| `Server/src/domain/PasswordPolicy.h` | + `WeakPasswordError`, `requireStrongPassword()` |
+| `Server/src/app/LoginUser.h` | Find user, verify password, issue token; `InvalidCredentialsError` |
+| `Server/tests/test_login_user.cpp` | 3 tests (happy path, wrong password, unknown email) |
 
 ---
 
 ## What's next
 
-`#16` and `#17` are both complete. Next: **`#18`** — HTTP-level tests and handlers for all four
-endpoints (register, login, me, change-password), written test-first against
-`02-api-contract.md`'s test cases, the same red-then-green rhythm as every step so far. This is
-where `PgUserRepository`, `Argon2PasswordHasher`, `JwtTokenService`, and the authenticator all get
-wired together for the first time — likely via small `app/` services (e.g. `RegisterUser`,
-`LoginUser`) that orchestrate them, per the hexagonal layering in `phase-2-plan.md` §4. Then
-`#24` (Client auth UI).
+`#16` and `#17` are complete. `#18` is underway, going slowly by design: `RegisterUser` and
+`LoginUser` are both fully done (6 tests between them). Next: `ChangePassword`, then DTOs + HTTP
+handlers + `HttpClient` tests for all four endpoints, then wiring into `main.cpp`. Then `#24`
+(Client auth UI).
