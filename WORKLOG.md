@@ -10,6 +10,38 @@ For durable/architectural facts, also update `docs/CONTEXT.md` (and add an ADR w
 
 ---
 
+## 2026-07-25 — VS Code (3)
+- **Reviewed Stages A+B with the owner** (architecture walkthrough, JWT trade-offs/cookie
+  discussion — kept `localStorage` + 24h JWT for now, deferred cookie/refresh-token hardening to a
+  future slice) then **designed and planned an extension**: injuries can now optionally reference
+  the `Muscles` catalog. Owner's ask specifically noted not all injuries are muscle injuries
+  (bone/tendon/joint matter too) — design keys off a new `injury_type` enum + optional `muscle_id`
+  valid only when `injury_type == "muscle"` (never required even then), single muscle per injury
+  (no join table), and seeds 16 muscles now from `01-data-model.md`'s already-documented Phase 2
+  list so Slice 3's full catalog seed stays compatible. Also adds a small read-only `GET /muscles`
+  (+`/{id}`) endpoint, needed both to validate `muscle_id` cleanly (422, not a raw FK-violation 500)
+  and to unblock Stage C's future muscle picker.
+- 6 decisions locked (E1–E6) in
+  `docs/superpowers/specs/2026-07-25-injury-muscle-link-design.md`; full 8-task bite-sized TDD plan
+  in `docs/superpowers/plans/2026-07-25-injury-muscle-link.md` (migration → domain →
+  `IMuscleRepository` stack → `InjuryService` validation/cascade → `MuscleController` →
+  extend `InjuryDto`/`InjuryController` → wire `main.cpp`). Both committed; **no code executed
+  yet** — owner chose inline execution (not subagent-driven) for learning visibility, to start next
+  session at Task 1.
+- Verified several Crow API details against the vendored header before writing plan code (avoids a
+  wasted build cycle next session): `crow::json::wvalue::list()` doesn't exist in this Crow version
+  (already worked around in Stage B via the `wvalue(vector<wvalue>)` ctor); confirmed `.i()`/`.b()`/
+  `.t()==type::Null` all exist. Also confirmed `Migrator` sorts migration files lexically by
+  filename, so `0003_injury_muscle_link.sql` slots in correctly after `0002_core_schema.sql`.
+- **One real gotcha flagged in the plan itself:** `DbTest`'s `ensureTestDatabaseReady()` silently
+  marks the whole suite unavailable (tests SKIP, not FAIL) if a migration throws — so Task 1
+  includes an explicit `psql` verification step (columns + seed count) rather than trusting `ctest`
+  output alone to catch a broken migration.
+- Pushed `slice-2-profile` to origin (14 commits at that point; now 16 with the two plan/spec
+  commits from this session).
+- Next: execute the injury/muscle link plan **Task 1 onward, inline**, same red→green→commit
+  rhythm as Stages A/B.
+
 ## 2026-07-25 — VS Code (2)
 - **Completed Stage B — `#20` injuries CRUD** (`/users/me/injuries`), branch `slice-2-profile`,
   6 commits, red→green→commit each: B1 `domain::Injury` + `InjuryPolicy` (5 tests); B2

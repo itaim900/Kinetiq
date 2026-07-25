@@ -210,6 +210,9 @@ port/fake → green → refactor.
 - `phase-2-slice-2-profile-injuries.md` — Slice 2 (Profile & Injuries) living build log
 - `superpowers/specs/2026-07-17-slice-2-profile-injuries-design.md` — Slice 2 design spec (8 decisions)
 - `superpowers/plans/2026-07-17-slice-2a-profile-backend.md` — Slice 2 Stage A bite-sized TDD plan
+- `superpowers/plans/2026-07-25-slice-2b-injuries-backend.md` — Slice 2 Stage B bite-sized TDD plan
+- `superpowers/specs/2026-07-25-injury-muscle-link-design.md` — injury/muscle link design spec (E1–E6)
+- `superpowers/plans/2026-07-25-injury-muscle-link.md` — injury/muscle link 8-task TDD plan (not yet executed)
 - `adr/` — decision records (note: 0003 & 0005 superseded by 0011 & 0012)
 - `learning/` — git-ignored personal notes: `code-walkthrough.md`, `how-to-run.md`,
   `session-log-phase1-spike.md`
@@ -236,9 +239,18 @@ in `docs/phase-2-slice-2-profile-injuries.md`; design in the spec (8 locked deci
 - **Stage B — #20 Injuries CRUD (`/users/me/injuries`): ✅ DONE** (2026-07-25). Full new vertical
   stack; ownership check returns **404** for another user's injury. `ctest` 122/122, live-verified.
   Drives the Phase 3 rule-based safety filter.
+- **Stage B extension — Injury/Muscle link: DESIGNED + PLANNED, not yet executed** (2026-07-25).
+  Owner wants injuries to optionally reference the `Muscles` catalog (e.g. hamstring injury →
+  "Hamstrings" muscle) while non-muscle injuries (bone/tendon/joint) stay fully supported. Locked
+  design (`injury_type` enum + optional `muscle_id`, valid only when type=muscle; one muscle per
+  injury, no join table; seed 16 muscles now from the already-documented Phase 2 list; add a
+  read-only `GET /muscles`). Full 8-task TDD plan written. **Next session starts at Task 1.** See
+  `docs/superpowers/specs/2026-07-25-injury-muscle-link-design.md` +
+  `docs/superpowers/plans/2026-07-25-injury-muscle-link.md`.
 - **Stage C — #25 Frontend** profile + injuries forms (React Hook Form + Zod — first use of either)
-  is next. Plan then execute: deps + `api.ts` + MSW → `ProfileForm` → `InjuriesPanel` → `App`
-  navigation → browser-automation verify. Then merge `slice-2-profile` → `main`.
+  is next after the extension. Plan then execute: deps + `api.ts` + MSW → `ProfileForm` →
+  `InjuriesPanel` (can now include a muscle picker via `GET /muscles`) → `App` navigation →
+  browser-automation verify. Then merge `slice-2-profile` → `main`.
 
 **Carry-overs worth remembering:**
 - Reuse the `AutoCommitPgUserRepository` pattern (connection-per-call, not one shared long-lived

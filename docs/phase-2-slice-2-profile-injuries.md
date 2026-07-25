@@ -1,9 +1,12 @@
 # Phase 2, Slice 2 — Profile & Injuries: Step-by-Step Build Log
 
-**Status:** 🚧 IN PROGRESS (started 2026-07-25). Stage A (`#19`) ✅ + Stage B (`#20`) ✅ done. Stage C (`#25`) pending.
+**Status:** 🚧 IN PROGRESS (started 2026-07-25). Stage A (`#19`) ✅ + Stage B (`#20`) ✅ done. A
+Stage B extension (injury/muscle link) is designed + planned but not yet executed. Stage C (`#25`)
+pending.
 **Issues:** #19 (`GET`/`PATCH /users/me`), #20 (injuries CRUD), #25 (React profile + injuries forms)
 **Design spec:** [`docs/superpowers/specs/2026-07-17-slice-2-profile-injuries-design.md`](./superpowers/specs/2026-07-17-slice-2-profile-injuries-design.md) — the *what & why* (8 locked decisions)
 **Stage A plan:** [`docs/superpowers/plans/2026-07-17-slice-2a-profile-backend.md`](./superpowers/plans/2026-07-17-slice-2a-profile-backend.md) — the bite-sized TDD steps
+**Injury/muscle link:** [design spec](./superpowers/specs/2026-07-25-injury-muscle-link-design.md) (E1–E6) · [implementation plan](./superpowers/plans/2026-07-25-injury-muscle-link.md) (8 tasks, not started)
 **Contract:** [`docs/02-api-contract.md`](./02-api-contract.md) — Profile & Injuries sections
 **Precedent:** [`docs/phase-2-slice-1-auth.md`](./phase-2-slice-1-auth.md) — the patterns this slice reuses
 **Branch:** `slice-2-profile` (all Slice 2 work; `main` untouched until the slice is done).
@@ -31,10 +34,26 @@ This is a **living document** — update it as the slice progresses.
 - [x] B5: `http/dto/InjuryDto.h` + `InjuryController` (GET/POST/PATCH/DELETE, 7 HTTP tests) — `e651976`
 - [x] B6: wired into `main.cpp`, live-verified — `85dfcb5`
 
+### Stage B extension — Injury/Muscle link ⬜ PLANNED, NOT STARTED (2026-07-25)
+Owner requested injuries be able to reference the `Muscles` catalog (e.g. a hamstring injury →
+the "Hamstrings" muscle), while correctly staying optional for non-muscle injuries (bone, tendon,
+joint). Design brainstormed and locked (6 decisions, E1–E6); full 8-task TDD plan written. Not yet
+executed — picks up with Task 1 next session.
+- [x] Design spec written — `docs/superpowers/specs/2026-07-25-injury-muscle-link-design.md`
+- [x] Implementation plan written — `docs/superpowers/plans/2026-07-25-injury-muscle-link.md`
+- [ ] Task 1: migration (`0003_injury_muscle_link.sql`) + `domain::Muscle` + grown `Injury` + `InjuryPolicy` cross-field rule
+- [ ] Task 2: persist `injury_type`/`muscle_id` through `PgInjuryRepository` + retrofit existing repo tests
+- [ ] Task 3: `IMuscleRepository` port + `InMemoryMuscleRepository` fake
+- [ ] Task 4: `PgMuscleRepository` + `AutoCommitPgMuscleRepository`
+- [ ] Task 5: `InjuryService` muscle validation + update cascade + retrofit `test_injury_service.cpp`
+- [ ] Task 6: `MuscleDto` + `MuscleController` (`GET /muscles`, `GET /muscles/{id}`)
+- [ ] Task 7: extend `InjuryDto`/`InjuryController` for the new fields + retrofit `test_injury_controller.cpp`
+- [ ] Task 8: wire `main.cpp` + live-verify
+
 ### Stage C — Frontend (`#25`) ⬜ NOT STARTED
 - [ ] deps (react-hook-form, zod, @hookform/resolvers) + `api.ts` calls + MSW
 - [ ] `ProfileForm` (RHF+Zod) + tests
-- [ ] `InjuriesPanel` + tests
+- [ ] `InjuriesPanel` + tests (can now include a muscle picker via `GET /muscles`)
 - [ ] `App` navigation to profile screen
 - [ ] browser-automation verify + cleanup
 
@@ -165,7 +184,9 @@ empty list `[]` → no-token `401`. Test user + injuries cleaned up (FK cascade)
 
 ## What's next
 
-**Stage C (`#25` frontend)** is the remaining piece: profile + injuries forms (first React Hook
-Form + Zod in this codebase). Plan it, then execute: deps + `api.ts` calls + MSW → `ProfileForm`
-(RHF+Zod mirroring `ProfilePolicy`) → `InjuriesPanel` → `App` navigation → browser-automation
-verify. Merge `slice-2-profile` → `main` when the whole slice is complete and verified.
+**Injury/muscle link (Stage B extension)** is designed and planned (spec + 8-task plan, both
+committed) but **not yet executed** — pick up with Task 1 (migration + domain) next session,
+executing inline (owner's preference, for visibility into each red→green→commit step). Then
+**Stage C (`#25` frontend)**: profile + injuries forms (first React Hook Form + Zod in this
+codebase), whose injury form can now build a muscle picker against `GET /muscles` once the
+extension lands. Merge `slice-2-profile` → `main` when the whole slice is complete and verified.
