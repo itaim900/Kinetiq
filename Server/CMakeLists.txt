@@ -66,7 +66,8 @@ add_executable(kinetiq_server
     src/adapters/db/AutoCommitPgUserRepository.cpp
     src/adapters/crypto/Argon2PasswordHasher.cpp
     src/adapters/crypto/JwtTokenService.cpp
-    src/http/controllers/AuthController.cpp)
+    src/http/controllers/AuthController.cpp
+    src/http/controllers/UserController.cpp)
 target_include_directories(kinetiq_server PRIVATE
     src
     ${CMAKE_SOURCE_DIR}/third_party/crow)
@@ -106,6 +107,7 @@ if(KINETIQ_BUILD_TESTS)
         tests/test_change_password.cpp
         tests/test_update_profile.cpp
         tests/test_auth_controller.cpp
+        tests/test_user_controller.cpp
         tests/test_auto_commit_pg_user_repository.cpp
         tests/support/TestDb.cpp
         src/adapters/db/Migrator.cpp
@@ -113,7 +115,8 @@ if(KINETIQ_BUILD_TESTS)
         src/adapters/db/AutoCommitPgUserRepository.cpp
         src/adapters/crypto/Argon2PasswordHasher.cpp
         src/adapters/crypto/JwtTokenService.cpp
-        src/http/controllers/AuthController.cpp)
+        src/http/controllers/AuthController.cpp
+        src/http/controllers/UserController.cpp)
     target_include_directories(kinetiq_tests PRIVATE
         src tests
         ${CMAKE_SOURCE_DIR}/third_party/crow)  # Crow for the in-process HTTP harness
