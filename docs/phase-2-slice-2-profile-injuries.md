@@ -1,6 +1,6 @@
 # Phase 2, Slice 2 — Profile & Injuries: Step-by-Step Build Log
 
-**Status:** 🚧 IN PROGRESS (started 2026-07-25). Stage A (`#19`) ✅ done. Stage B (`#20`) + Stage C (`#25`) pending.
+**Status:** 🚧 IN PROGRESS (started 2026-07-25). Stage A (`#19`) ✅ + Stage B (`#20`) ✅ done. Stage C (`#25`) pending.
 **Issues:** #19 (`GET`/`PATCH /users/me`), #20 (injuries CRUD), #25 (React profile + injuries forms)
 **Design spec:** [`docs/superpowers/specs/2026-07-17-slice-2-profile-injuries-design.md`](./superpowers/specs/2026-07-17-slice-2-profile-injuries-design.md) — the *what & why* (8 locked decisions)
 **Stage A plan:** [`docs/superpowers/plans/2026-07-17-slice-2a-profile-backend.md`](./superpowers/plans/2026-07-17-slice-2a-profile-backend.md) — the bite-sized TDD steps
@@ -22,14 +22,14 @@ This is a **living document** — update it as the slice progresses.
 - [x] A4: `http/dto/ProfileDto.h` + `http/controllers/UserController` GET/PATCH (6 HTTP tests) — `e5b56d0`
 - [x] A5: wired into `main.cpp`, live-verified via curl — `15eb144`
 
-### Stage B — Injuries (`#20`) ⬜ NOT STARTED
-- [ ] Stage B TDD plan written
-- [ ] `domain::Injury` + validation
-- [ ] `ports::IInjuryRepository` + `InMemoryInjuryRepository` fake
-- [ ] `db::PgInjuryRepository` + `AutoCommitPgInjuryRepository`
-- [ ] `app::InjuryService` (add/list/update/remove + ownership 404)
-- [ ] `http/dto/InjuryDto.h` + `InjuryController` (GET/POST/PATCH/DELETE)
-- [ ] wired into `main.cpp`, live-verified
+### Stage B — Injuries (`#20`) ✅ DONE (2026-07-25)
+- [x] Stage B TDD plan written — `docs/superpowers/plans/2026-07-25-slice-2b-injuries-backend.md`
+- [x] B1: `domain::Injury` + `InjuryPolicy` validation (5 tests) — `c86a624`
+- [x] B2: `ports::IInjuryRepository` + `InMemoryInjuryRepository` fake (5 tests) — `013cb30`
+- [x] B3: `db::PgInjuryRepository` + `AutoCommitPgInjuryRepository` (10 tests) — `f864966`
+- [x] B4: `app::InjuryService` (add/list/update/remove + ownership 404) (6 tests) — `af57de7`
+- [x] B5: `http/dto/InjuryDto.h` + `InjuryController` (GET/POST/PATCH/DELETE, 7 HTTP tests) — `e651976`
+- [x] B6: wired into `main.cpp`, live-verified — `85dfcb5`
 
 ### Stage C — Frontend (`#25`) ⬜ NOT STARTED
 - [ ] deps (react-hook-form, zod, @hookform/resolvers) + `api.ts` calls + MSW
@@ -118,13 +118,54 @@ build's success gates the next step, check the real exit code, not piped tail ou
 
 **Stage A result:** `ctest` **94/94** (up from 70 at Slice 1 close), live-verified. `#19` done.
 
+### Stage B — Injuries (`#20`)
+
+Executed on branch `slice-2-profile` following
+`2026-07-25-slice-2b-injuries-backend.md`. A full new vertical stack mirroring the Slice-1 user
+stack — so mostly "do what auth did, for a second entity."
+
+**B1 — domain + policy (`c86a624`).** `domain::Injury` (id, userId, bodyRegion, severity, active,
+notes, createdAt) + `InjuryPolicy` (body_region non-empty, severity ∈ {mild,moderate,severe}),
+`InjuryValidationError` carrying the field name. 5 tests. `body_region` is free text in v1 —
+tightening to a controlled vocabulary waits for the Slice-3 exercise catalog.
+
+**B2 — port + fake (`013cb30`).** `IInjuryRepository` (create/listByUser/findById/update/
+deleteById) + `InMemoryInjuryRepository` (vector-backed). 5 contract tests; `listByUser` scopes to
+owner.
+
+**B3 — Pg adapters (`f864966`).** `PgInjuryRepository` (takes `pqxx::work&`, real SQL incl.
+`INSERT ... RETURNING`, `ORDER BY id`) + `AutoCommitPgInjuryRepository` (connection-per-call, same
+pattern as the user repo). DB tests seed a user first (FK). 10 injury-repo tests green vs. real
+Postgres.
+
+**B4 — InjuryService (`af57de7`).** One cohesive service (not four use-case classes, per D5)
+because add/list/update/remove share the ownership check: a private `requireOwned()` loads by id
+and throws `InjuryNotFoundError` if missing **or** not owned by the caller — so another user's
+injury is indistinguishable from a nonexistent one. 6 tests incl. both cross-user cases.
+
+**B5 — HTTP layer (`e651976`).** `InjuryDto` + `InjuryController`: a **collection** route
+(`GET`/`POST /users/me/injuries`) and an **item** route (`PATCH`/`DELETE
+/users/me/injuries/<int>`), `InjuryNotFoundError` → **404**. 7 HTTP tests via `HttpClient`,
+including cross-user PATCH and DELETE both returning 404. Full suite 122/122.
+
+*Crow API gotcha (caught before coding, per the plan's watch-items):* verified the vendored
+`crow_all.h` first — `crow::json::wvalue::list()` does **not** exist in this version. Built the
+injuries JSON array via the `wvalue(std::vector<wvalue>)` constructor instead, which correctly
+serializes an **empty** list as `[]` (not `null`). Also confirmed `.b()` (bool accessor) and
+`<int>`→`int64_t` route-param binding exist before relying on them.
+
+**B6 — wire + live-verify (`85dfcb5`).** Added `AutoCommitPgInjuryRepository` +
+`registerInjuryRoutes` to `main.cpp`. **Live-verified vs. real server + Postgres:** create `201`
+(created_at set by DB) → list → bad severity `422` → PATCH active=false `200` → DELETE `204` →
+empty list `[]` → no-token `401`. Test user + injuries cleaned up (FK cascade).
+
+**Stage B result:** `ctest` **122/122** (up from 94 after Stage A), live-verified. `#20` done.
+
 ---
 
 ## What's next
 
-Stage B (`#20` injuries) — write its own bite-sized plan
-(`docs/superpowers/plans/2026-07-25-slice-2b-injuries-backend.md`) mirroring Stage A's, then execute:
-`Injury` domain + validation → `IInjuryRepository` + fake → `Pg`/`AutoCommit` adapters →
-`InjuryService` (with the ownership-check 404) → `InjuryController` → wire + verify. Then Stage C
-(`#25` frontend, first React Hook Form + Zod). Merge `slice-2-profile` → `main` when the slice is
-complete and verified.
+**Stage C (`#25` frontend)** is the remaining piece: profile + injuries forms (first React Hook
+Form + Zod in this codebase). Plan it, then execute: deps + `api.ts` calls + MSW → `ProfileForm`
+(RHF+Zod mirroring `ProfilePolicy`) → `InjuriesPanel` → `App` navigation → browser-automation
+verify. Merge `slice-2-profile` → `main` when the whole slice is complete and verified.

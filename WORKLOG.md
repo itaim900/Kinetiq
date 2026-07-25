@@ -10,6 +10,28 @@ For durable/architectural facts, also update `docs/CONTEXT.md` (and add an ADR w
 
 ---
 
+## 2026-07-25 — VS Code (2)
+- **Completed Stage B — `#20` injuries CRUD** (`/users/me/injuries`), branch `slice-2-profile`,
+  6 commits, red→green→commit each: B1 `domain::Injury` + `InjuryPolicy` (5 tests); B2
+  `IInjuryRepository` + `InMemoryInjuryRepository` fake (5); B3 `PgInjuryRepository` +
+  `AutoCommitPgInjuryRepository` (10 incl. real Postgres); B4 one cohesive `app::InjuryService`
+  with a shared `requireOwned()` → **`InjuryNotFoundError` → 404** for another user's injury (6);
+  B5 `InjuryDto` + `InjuryController` (collection GET/POST + item PATCH/DELETE by `<int>` id, 7
+  HTTP tests incl. both cross-user 404s); B6 wired `main.cpp`.
+- **Ownership isolation** is the core security property here: update/delete on an injury you don't
+  own returns 404 (never 403 — don't even leak that it exists), enforced in the service and proven
+  at the HTTP layer with two users.
+- **Crow API gotcha, caught before coding:** verified the watch-items from the plan against the
+  vendored `crow_all.h` first — `crow::json::wvalue::list()` doesn't exist in this version, so the
+  injuries array is built via the `wvalue(std::vector<wvalue>)` constructor, which makes an **empty
+  list serialize as `[]`** (not `null`). `.b()` bool accessor and `<int>`→`int64_t` route param
+  confirmed present.
+- **Verified:** `ctest` **122/122** (was 94) with Postgres up; **live-verified** via curl —
+  create 201 → list → bad-severity 422 → PATCH active=false 200 → DELETE 204 → empty list `[]` →
+  no-token 401. Test user + injuries cleaned up (FK cascade).
+- Next: Stage C (`#25` frontend — profile + injuries forms, first React Hook Form + Zod). Then
+  merge `slice-2-profile` → `main`.
+
 ## 2026-07-25 — VS Code
 - **Started Phase 2 Slice 2 (Profile & Injuries).** Brainstormed the whole-slice design and locked
   8 decisions (`docs/superpowers/specs/2026-07-17-slice-2-profile-injuries-design.md`): expand

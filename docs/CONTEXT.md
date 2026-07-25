@@ -167,8 +167,12 @@ endpoint → UI), **auth first** (every other endpoint is 🔒).
   **Stage A (#19 `GET`/`PATCH /users/me`) ✅ DONE:** grew `domain::User` + `domain::ProfilePolicy`
   validator, `PgUserRepository` maps/persists all profile columns (no migration — Slice 0 built
   them), `app::UpdateProfile` (load-modify-save), `ProfileDto` + a new `UserController` (GET/PATCH
-  on one Crow multi-method route, RFC 9457 field errors), wired into `main.cpp`. `ctest` **94/94**,
-  live-verified via curl. Still to do: #20 injuries CRUD, #25 FE forms (RHF+Zod).
+  on one Crow multi-method route, RFC 9457 field errors), wired into `main.cpp`.
+  **Stage B (#20 injuries CRUD) ✅ DONE:** full new vertical stack — `domain::Injury` +
+  `InjuryPolicy`, `IInjuryRepository` + fake, `PgInjuryRepository` + `AutoCommitPgInjuryRepository`,
+  one cohesive `app::InjuryService` (shared ownership check → **404** for another user's injury),
+  `InjuryDto` + `InjuryController` (collection GET/POST + item PATCH/DELETE by `<int>` id), wired
+  into `main.cpp`. `ctest` **122/122**, live-verified via curl. Still to do: #25 FE forms (RHF+Zod).
 - **Slice 3 — Exercises + seed:** #21 catalog endpoints, #22 seed script, #26 FE browser.
 - **Slice 4 — Manual workouts:** #23 workouts CRUD, #27 FE builder.
 
@@ -229,13 +233,12 @@ See `docs/learning/how-to-run.md`. Two ways:
 in `docs/phase-2-slice-2-profile-injuries.md`; design in the spec (8 locked decisions).
 
 - **Stage A — #19 `GET`/`PATCH /users/me`: ✅ DONE** (2026-07-25). `ctest` 94/94, live-verified.
-- **Stage B — #20 Injuries CRUD (`/users/me/injuries`)** is next. Write its own bite-sized plan
-  (`docs/superpowers/plans/2026-07-25-slice-2b-injuries-backend.md`) mirroring Stage A, then
-  execute: `domain::Injury` + validation → `IInjuryRepository` + fake → `PgInjuryRepository` +
-  `AutoCommitPgInjuryRepository` → one cohesive `app::InjuryService` (with the ownership-check that
-  returns **404** for another user's injury — never leak existence) → `InjuryController` → wire +
-  verify. Drives the Phase 3 rule-based safety filter.
-- **Stage C — #25 Frontend** profile + injuries forms (React Hook Form + Zod — first use of either).
+- **Stage B — #20 Injuries CRUD (`/users/me/injuries`): ✅ DONE** (2026-07-25). Full new vertical
+  stack; ownership check returns **404** for another user's injury. `ctest` 122/122, live-verified.
+  Drives the Phase 3 rule-based safety filter.
+- **Stage C — #25 Frontend** profile + injuries forms (React Hook Form + Zod — first use of either)
+  is next. Plan then execute: deps + `api.ts` + MSW → `ProfileForm` → `InjuriesPanel` → `App`
+  navigation → browser-automation verify. Then merge `slice-2-profile` → `main`.
 
 **Carry-overs worth remembering:**
 - Reuse the `AutoCommitPgUserRepository` pattern (connection-per-call, not one shared long-lived
