@@ -104,6 +104,7 @@ if(KINETIQ_BUILD_TESTS)
         tests/test_register_user.cpp
         tests/test_login_user.cpp
         tests/test_change_password.cpp
+        tests/test_update_profile.cpp
         tests/test_auth_controller.cpp
         tests/test_auto_commit_pg_user_repository.cpp
         tests/support/TestDb.cpp
