@@ -95,6 +95,7 @@ if(KINETIQ_BUILD_TESTS)
         tests/test_migrations.cpp
         tests/test_http_harness.cpp
         tests/test_password_policy.cpp
+        tests/test_profile_policy.cpp
         tests/test_user_repository.cpp
         tests/test_pg_user_repository.cpp
         tests/test_password_hasher.cpp
