@@ -162,7 +162,13 @@ endpoint → UI), **auth first** (every other endpoint is 🔒).
   `docs/02-api-contract.md`. **Explicitly deferred to future slices:** Google OAuth,
   forgot-password reset (Client has a visual-only placeholder), account deletion, login
   rate-limiting, email verification.
-- **Slice 2 — Profile & Injuries:** #19 `/users/me`, #20 injuries CRUD, #25 FE forms (RHF+Zod).
+- **Slice 2 — Profile & Injuries: IN PROGRESS (started 2026-07-25, branch `slice-2-profile`).**
+  Design brainstormed (8 locked decisions, see spec) + Stage A TDD plan written.
+  **Stage A (#19 `GET`/`PATCH /users/me`) ✅ DONE:** grew `domain::User` + `domain::ProfilePolicy`
+  validator, `PgUserRepository` maps/persists all profile columns (no migration — Slice 0 built
+  them), `app::UpdateProfile` (load-modify-save), `ProfileDto` + a new `UserController` (GET/PATCH
+  on one Crow multi-method route, RFC 9457 field errors), wired into `main.cpp`. `ctest` **94/94**,
+  live-verified via curl. Still to do: #20 injuries CRUD, #25 FE forms (RHF+Zod).
 - **Slice 3 — Exercises + seed:** #21 catalog endpoints, #22 seed script, #26 FE browser.
 - **Slice 4 — Manual workouts:** #23 workouts CRUD, #27 FE builder.
 
@@ -197,6 +203,9 @@ port/fake → green → refactor.
 - `phase-1-summary.md` — Phase 1 recap (file inventory, decisions, verification)
 - `phase-2-plan.md` — Phase 2 plan (slices, locked decisions, TDD workflow)
 - `phase-2-slice-1-auth.md` — Slice 1 (Auth) step-by-step build log: every decision and file, in order
+- `phase-2-slice-2-profile-injuries.md` — Slice 2 (Profile & Injuries) living build log
+- `superpowers/specs/2026-07-17-slice-2-profile-injuries-design.md` — Slice 2 design spec (8 decisions)
+- `superpowers/plans/2026-07-17-slice-2a-profile-backend.md` — Slice 2 Stage A bite-sized TDD plan
 - `adr/` — decision records (note: 0003 & 0005 superseded by 0011 & 0012)
 - `learning/` — git-ignored personal notes: `code-walkthrough.md`, `how-to-run.md`,
   `session-log-phase1-spike.md`
@@ -216,19 +225,24 @@ See `docs/learning/how-to-run.md`. Two ways:
 **Ports:** 5173 (Vite dev), 8080 (backend), 5432 (Postgres dev), 3000 (containerized app UI).
 
 ## Next steps
-**Phase 2, Slice 1 — Auth: ✅ COMPLETE** (`#16`, `#17`, `#18`, `#24` all done, 2026-07-16). Full
-narrative in `docs/phase-2-slice-1-auth.md`.
+**Phase 2, Slice 2 — Profile & Injuries: IN PROGRESS** on branch `slice-2-profile`. Full narrative
+in `docs/phase-2-slice-2-profile-injuries.md`; design in the spec (8 locked decisions).
 
-**Phase 2, Slice 2 — Profile & Injuries** is next (see `docs/phase-2-plan.md`), same TDD rhythm
-per `02-api-contract.md`:
-1. **#19** `GET`/`PATCH /users/me` — full profile (biometrics, preferences, `experience_level`,
-   goals), partial update semantics.
-2. **#20** Injuries CRUD (`/users/me/injuries`) — drives the rule-based safety filter in Phase 3.
-3. **#25** Frontend: profile + injuries forms (React Hook Form + Zod — first use of either in
-   this codebase).
+- **Stage A — #19 `GET`/`PATCH /users/me`: ✅ DONE** (2026-07-25). `ctest` 94/94, live-verified.
+- **Stage B — #20 Injuries CRUD (`/users/me/injuries`)** is next. Write its own bite-sized plan
+  (`docs/superpowers/plans/2026-07-25-slice-2b-injuries-backend.md`) mirroring Stage A, then
+  execute: `domain::Injury` + validation → `IInjuryRepository` + fake → `PgInjuryRepository` +
+  `AutoCommitPgInjuryRepository` → one cohesive `app::InjuryService` (with the ownership-check that
+  returns **404** for another user's injury — never leak existence) → `InjuryController` → wire +
+  verify. Drives the Phase 3 rule-based safety filter.
+- **Stage C — #25 Frontend** profile + injuries forms (React Hook Form + Zod — first use of either).
 
-One carry-over worth remembering: reuse the `AutoCommitPgUserRepository` pattern
-(connection-per-call, not one shared long-lived transaction) for any new repository Slice 2 wires
-directly into `main.cpp`'s routes.
+**Carry-overs worth remembering:**
+- Reuse the `AutoCommitPgUserRepository` pattern (connection-per-call, not one shared long-lived
+  transaction) for the new `PgInjuryRepository` wired into `main.cpp`'s routes.
+- When a build's success gates the next command, check the real exit code (`; echo exit=$?`), not a
+  piped `tail` — a pipeline reports the last command's status, masking build failures.
+- Merge `slice-2-profile` → `main` when the whole slice (A+B+C) is complete and verified.
 
-Capture Phase 2 locked decisions + auth-as-authenticator as ADRs (0013–00xx).
+Capture Phase 2 locked decisions + auth-as-authenticator as ADRs (0013–00xx); Slice 2's D1
+(expand-User) and D2 (load-modify-save) are candidates too.

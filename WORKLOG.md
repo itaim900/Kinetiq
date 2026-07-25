@@ -10,6 +10,29 @@ For durable/architectural facts, also update `docs/CONTEXT.md` (and add an ADR w
 
 ---
 
+## 2026-07-25 — VS Code
+- **Started Phase 2 Slice 2 (Profile & Injuries).** Brainstormed the whole-slice design and locked
+  8 decisions (`docs/superpowers/specs/2026-07-17-slice-2-profile-injuries-design.md`): expand
+  `domain::User` (not a separate entity), load-modify-save for `PATCH`, no null-clearing in v1,
+  **defer `preferences`** until its consumer (recommender) exists, one cohesive `InjuryService`,
+  keep `/auth/me` and `/users/me` distinct, domain-level validation, RFC 9457 field errors.
+  Wrote a bite-sized TDD plan for Stage A (`docs/superpowers/plans/2026-07-17-slice-2a-profile-backend.md`).
+- **Completed Stage A — `#19` `GET`/`PATCH /users/me`**, on branch `slice-2-profile`, 5 commits,
+  red→green→commit each: A1 grew `domain::User` + `ProfilePolicy` validator (12 tests); A2
+  extended `PgUserRepository` to map/persist all profile columns (NULL↔`std::optional`) + fake
+  round-trip; A3 `app::UpdateProfile` (load-modify-save, guard-validate before persist); A4
+  `ProfileDto` + new `UserController` (GET/PATCH on one Crow multi-method route, RFC 9457 field
+  errors); A5 wired `main.cpp`. **No migration** — Slice 0 already built every column.
+- Key decision realized in code: biometrics are **optional/NULL-able** (never forced), but any
+  provided value is **hard-rejected** server-side if out of range (weight (0,500], height (0,300],
+  etc.) — the client's future Zod schema will surface the same limits as a friendly "please check"
+  hint. Server enforces, client guides.
+- **Verified, not just claimed:** `ctest` **94/94** (was 70) with Postgres up so DB integration
+  tests ran; **live-verified** via curl against the real server + Postgres (register → GET metric
+  default → PATCH → GET persisted → invalid 422 → no-token 401), test user cleaned up.
+- Next: Stage B (`#20` injuries CRUD) — write its own plan then execute; then Stage C (`#25` FE
+  forms, first RHF+Zod). Branch `slice-2-profile` stays open until the slice is done.
+
 ## 2026-07-16 — VS Code (2)
 - **Finished `#24` — Slice 1 (Auth) is now fully complete** (`#16`, `#17`, `#18`, `#24` all done).
   Built the Client auth UI, mirroring the backend's TDD rhythm onto Vitest + Testing Library +
