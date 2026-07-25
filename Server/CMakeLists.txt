@@ -98,6 +98,7 @@ if(KINETIQ_BUILD_TESTS)
         tests/test_password_policy.cpp
         tests/test_profile_policy.cpp
         tests/test_injury_policy.cpp
+        tests/test_injury_repository.cpp
         tests/test_user_repository.cpp
         tests/test_pg_user_repository.cpp
         tests/test_password_hasher.cpp
