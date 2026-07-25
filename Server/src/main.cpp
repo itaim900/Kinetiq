@@ -9,10 +9,12 @@
 
 #include "adapters/crypto/Argon2PasswordHasher.h"
 #include "adapters/crypto/JwtTokenService.h"
+#include "adapters/db/AutoCommitPgInjuryRepository.h"
 #include "adapters/db/AutoCommitPgUserRepository.h"
 #include "adapters/db/Migrator.h"
 #include "config/Env.h"
 #include "http/controllers/AuthController.h"
+#include "http/controllers/InjuryController.h"
 #include "http/controllers/UserController.h"
 
 namespace {
@@ -95,10 +97,12 @@ int main() {
     }
 
     kinetiq::db::AutoCommitPgUserRepository users(buildConnString());
+    kinetiq::db::AutoCommitPgInjuryRepository injuries(buildConnString());
     kinetiq::crypto::Argon2PasswordHasher hasher;
     kinetiq::crypto::JwtTokenService tokens(jwtSecret, std::chrono::hours(24));
     kinetiq::http::registerAuthRoutes(app, users, hasher, tokens);
     kinetiq::http::registerUserRoutes(app, users, tokens);
+    kinetiq::http::registerInjuryRoutes(app, injuries, tokens);
 
     // Bind to 127.0.0.1 by default (safe for local dev). In containers set
     // BIND_ADDR=0.0.0.0 so other containers (e.g. the frontend) can reach it.
