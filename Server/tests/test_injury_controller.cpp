@@ -13,11 +13,13 @@
 #include "adapters/crypto/JwtTokenService.h"
 #include "http/controllers/AuthController.h"
 #include "http/controllers/InjuryController.h"
+#include "support/InMemoryCatalogRepository.h"
 #include "support/InMemoryInjuryRepository.h"
 #include "support/InMemoryUserRepository.h"
 
 using kinetiq::crypto::Argon2PasswordHasher;
 using kinetiq::crypto::JwtTokenService;
+using kinetiq::testsupport::InMemoryCatalogRepository;
 using kinetiq::testsupport::InMemoryInjuryRepository;
 using kinetiq::testsupport::InMemoryUserRepository;
 
@@ -27,12 +29,13 @@ struct InjuryApi {
     crow::SimpleApp app;
     InMemoryUserRepository users;
     InMemoryInjuryRepository injuries;
+    InMemoryCatalogRepository catalog;
     Argon2PasswordHasher hasher;
     JwtTokenService tokens{"test-secret", std::chrono::seconds(3600)};
 
     InjuryApi() {
         kinetiq::http::registerAuthRoutes(app, users, hasher, tokens);
-        kinetiq::http::registerInjuryRoutes(app, injuries, tokens);
+        kinetiq::http::registerInjuryRoutes(app, injuries, catalog, tokens);
     }
 };
 

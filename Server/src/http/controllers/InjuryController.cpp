@@ -12,17 +12,18 @@
 namespace kinetiq::http {
 
 void registerInjuryRoutes(crow::SimpleApp& app, kinetiq::ports::IInjuryRepository& injuries,
+                          kinetiq::ports::ICatalogRepository& catalog,
                           kinetiq::ports::ITokenService& tokens) {
     // Collection: GET (list) + POST (create).
     CROW_ROUTE(app, "/api/v1/users/me/injuries")
         .methods(crow::HTTPMethod::Get, crow::HTTPMethod::Post)(
-            [&injuries, &tokens](const crow::request& req) -> crow::response {
+            [&injuries, &catalog, &tokens](const crow::request& req) -> crow::response {
                 const auto currentUser = authenticate(req, tokens);
                 if (!currentUser.has_value()) {
                     return dto::errorResponse(401, "unauthenticated", "Unauthorized",
                                               "Missing, invalid, or expired token.");
                 }
-                kinetiq::app::InjuryService service(injuries);
+                kinetiq::app::InjuryService service(injuries, catalog);
 
                 if (req.method == crow::HTTPMethod::Get) {
                     return crow::response(200,
@@ -50,13 +51,13 @@ void registerInjuryRoutes(crow::SimpleApp& app, kinetiq::ports::IInjuryRepositor
     // Item: PATCH + DELETE by id.
     CROW_ROUTE(app, "/api/v1/users/me/injuries/<int>")
         .methods(crow::HTTPMethod::Patch, crow::HTTPMethod::Delete)(
-            [&injuries, &tokens](const crow::request& req, std::int64_t id) -> crow::response {
+            [&injuries, &catalog, &tokens](const crow::request& req, std::int64_t id) -> crow::response {
                 const auto currentUser = authenticate(req, tokens);
                 if (!currentUser.has_value()) {
                     return dto::errorResponse(401, "unauthenticated", "Unauthorized",
                                               "Missing, invalid, or expired token.");
                 }
-                kinetiq::app::InjuryService service(injuries);
+                kinetiq::app::InjuryService service(injuries, catalog);
 
                 try {
                     if (req.method == crow::HTTPMethod::Delete) {
