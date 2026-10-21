@@ -1,0 +1,4 @@
+# Shell scripts must keep LF line endings on every OS. With CRLF, bash reads
+# the stray \r as part of each command ("bad interpreter: /bin/sh^M").
+.githooks/* text eol=lf
+*.sh        text eol=lf
