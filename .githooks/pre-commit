@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Runs automatically on `git commit` (enable once per clone with
+# `git config core.hooksPath .githooks`). Checks only the half of the app
+# that has staged changes; docs-only commits run no checks.
+# A non-zero exit cancels the commit.
+# Emergency bypass (e.g. a deliberate TDD "red" commit): git commit --no-verify
+HOOK_NAME=pre-commit
+. "$(dirname "$0")/lib.sh"
+
+staged="$(git diff --cached --name-only)"
+server_changed=no
+client_changed=no
+if printf '%s\n' "$staged" | grep -q '^Server/'; then server_changed=yes; fi
+if printf '%s\n' "$staged" | grep -q '^Client/'; then client_changed=yes; fi
+
+if [ "$server_changed" = no ] && [ "$client_changed" = no ]; then
+  say "no app code changed, skipping checks"
+  exit 0
+fi
+
+status=0
+if [ "$server_changed" = yes ]; then
+  server_check warn || status=1
+else
+  say "Server unchanged -> skipped"
+fi
+if [ "$client_changed" = yes ]; then
+  client_check || status=1
+else
+  say "Client unchanged -> skipped"
+fi
+
+if [ "$status" -ne 0 ]; then
+  fail "commit blocked. Fix the failure above, or bypass with: git commit --no-verify"
+fi
+exit "$status"
