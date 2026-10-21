@@ -61,7 +61,7 @@ TEST_F(DbTest, PgInjuryRepository_ListByUser_IsScopedToOwner) {
     const long long b = seedUser(tx(), "pg-injury-owner-b@example.com");
     PgInjuryRepository repo(tx());
     repo.create(make(a, "lower_back", "mild"));
-    repo.create(make(b, "left_knee", "severe"));
+    repo.create(make(b, "knee", "severe"));
 
     EXPECT_EQ(repo.listByUser(a).size(), 1u);
     EXPECT_EQ(repo.listByUser(b).size(), 1u);
@@ -112,7 +112,7 @@ TEST_F(DbTest, PgInjuryRepository_Create_PersistsInjuryTypeAndMuscleId) {
     const long long muscleId = findMuscleIdByName(tx(), "Hamstrings");
     PgInjuryRepository repo(tx());
 
-    Injury injury = make(userId, "hamstring", "moderate");
+    Injury injury = make(userId, "thigh", "moderate");
     injury.injuryType = "muscle";
     injury.muscleId = muscleId;
     const Injury saved = repo.create(injury);

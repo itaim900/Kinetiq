@@ -66,6 +66,8 @@ add_executable(kinetiq_server
     src/adapters/db/AutoCommitPgUserRepository.cpp
     src/adapters/db/PgInjuryRepository.cpp
     src/adapters/db/AutoCommitPgInjuryRepository.cpp
+    src/adapters/db/PgCatalogRepository.cpp
+    src/adapters/db/AutoCommitPgCatalogRepository.cpp
     src/adapters/crypto/Argon2PasswordHasher.cpp
     src/adapters/crypto/JwtTokenService.cpp
     src/http/controllers/AuthController.cpp
@@ -119,12 +121,16 @@ if(KINETIQ_BUILD_TESTS)
         tests/test_auto_commit_pg_user_repository.cpp
         tests/test_pg_injury_repository.cpp
         tests/test_auto_commit_pg_injury_repository.cpp
+        tests/test_pg_catalog_repository.cpp
+        tests/test_auto_commit_pg_catalog_repository.cpp
         tests/support/TestDb.cpp
         src/adapters/db/Migrator.cpp
         src/adapters/db/PgUserRepository.cpp
         src/adapters/db/AutoCommitPgUserRepository.cpp
         src/adapters/db/PgInjuryRepository.cpp
         src/adapters/db/AutoCommitPgInjuryRepository.cpp
+        src/adapters/db/PgCatalogRepository.cpp
+        src/adapters/db/AutoCommitPgCatalogRepository.cpp
         src/adapters/crypto/Argon2PasswordHasher.cpp
         src/adapters/crypto/JwtTokenService.cpp
         src/http/controllers/AuthController.cpp
