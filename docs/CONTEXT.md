@@ -91,6 +91,15 @@ short viewports) via Playwright's actionability checks.
   running for days, squatting ports and wasting RAM — the wrapper binds the child process tree to
   a Windows Job Object (`JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`) so it's killed automatically if the
   wrapper process ever ends, even via a forced kill. Verified through 4 levels of process nesting.
+- **Git hooks** in `.githooks/` (enable: `git config core.hooksPath .githooks`): pre-commit checks the
+  changed half, pre-push runs everything and blocks if DB tests skipped. Spec:
+  `docs/superpowers/specs/2026-10-21-git-hooks-design.md`.
+- **Repo folder was renamed `Fit App` → `Kinetiq`.** Compose derives the project name from the
+  folder, so the existing Postgres container/volume belong to project `fitapp`
+  (`fitapp_kinetiq_pgdata`) and `docker compose up -d` now clashes on the container name. Until
+  that's fixed, start Postgres with **`docker start kinetiq-postgres`**.
+- Docker Desktop's built-in **Kubernetes was turned off** (2026-10-21) to save RAM; settings backup
+  at `%APPDATA%\Docker\settings-store.json.bak-2026-10-21`.
 - **GitHub CLI (`gh`)** installed at `C:\Program Files\GitHub CLI\gh.exe` (v2.95.0), logged in as
   `itaim900`. On system PATH; restart terminal/Cursor if `gh` not found. Token scopes: `repo`,
   `read:org`, `gist` (no `read:packages` unless refreshed).

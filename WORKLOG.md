@@ -10,6 +10,23 @@ For durable/architectural facts, also update `docs/CONTEXT.md` (and add an ADR w
 
 ---
 
+## 2026-10-21 — VS Code
+- **Expanded `CLAUDE.md`** (via `/init`): kept the session rules and added build/test commands
+  (including how to run a single GoogleTest or Vitest test), env vars, the server hexagonal layout
+  (the two repository layers: plain Pg vs AutoCommit), auth as a plain function instead of Crow
+  middleware, the testing pyramid, and the client layout. No code changes.
+- **Step 0 re-verification after ~3 months away:** client 22/22, server 122/122 (0 skipped),
+  live health OK via Vite proxy. Found: folder rename `Fit App`→`Kinetiq` breaks
+  `docker compose up -d` (use `docker start kinetiq-postgres`); turned off Docker Desktop
+  Kubernetes (3 stray `hello-web` pods eating RAM).
+- **Git hooks** (brainstorm → spec → plan → inline TDD-style execution): tracked `.githooks/`
+  (`lib.sh` + `pre-commit` + `pre-push`), `.gitattributes` forces LF. pre-commit checks only the
+  changed half and warns on skipped DB tests; pre-push runs everything and blocks on skips (detected
+  from GoogleTest's `[  SKIPPED ] N` line, because the binary exits 0 when DB tests skip). All 7
+  spec scenarios verified (docs-only skip, failing test blocks, per-half selection, DB-down
+  warn/block, healthy push).
+- Next: injury/muscle link plan, Task 1.
+
 ## 2026-07-25 — VS Code (3)
 - **Reviewed Stages A+B with the owner** (architecture walkthrough, JWT trade-offs/cookie
   discussion — kept `localStorage` + 24h JWT for now, deferred cookie/refresh-token hardening to a

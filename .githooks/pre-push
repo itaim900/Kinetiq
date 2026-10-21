@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Runs automatically on `git push`. Full check of BOTH halves regardless of
+# what changed, and strict: skipped DB tests block the push, so nothing
+# reaches GitHub unless all server tests really ran.
+# Emergency bypass: git push --no-verify
+HOOK_NAME=pre-push
+. "$(dirname "$0")/lib.sh"
+
+say "full check before push (server + client)"
+status=0
+server_check strict || status=1
+client_check || status=1
+client_build || status=1
+
+if [ "$status" -ne 0 ]; then
+  fail "push blocked. Fix the failure above, or bypass with: git push --no-verify"
+fi
+exit "$status"

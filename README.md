@@ -58,6 +58,9 @@ npm install && npm run dev   # http://localhost:5173, proxies /api -> server
 Health check: `GET http://localhost:8080/api/v1/health` →
 `{"status":"ok","db":"connected"}`.
 
+**Git hooks (once per clone):** `git config core.hooksPath .githooks`. Commits check the part of the
+app you changed; pushes run the full build + test suite (Postgres must be running).
+
 ## Running the whole app with Docker (any machine)
 
 No toolchain required — only Docker. Prebuilt images are published to GHCR by CI.
