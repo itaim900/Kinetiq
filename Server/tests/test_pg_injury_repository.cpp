@@ -31,6 +31,7 @@ Injury make(long long userId, const std::string& region, const std::string& seve
     i.userId = userId;
     i.bodyRegion = region;
     i.severity = severity;
+    i.injuryType = "other";
     return i;
 }
 
@@ -95,4 +96,32 @@ TEST_F(DbTest, PgInjuryRepository_DeleteById_Removes) {
 
     repo.deleteById(saved.id);
     EXPECT_FALSE(repo.findById(saved.id).has_value());
+}
+
+namespace {
+long long findMuscleIdByName(pqxx::work& tx, const std::string& name) {
+    const auto result = tx.exec("SELECT id FROM muscles WHERE name = $1", pqxx::params{name});
+    return result[0][0].as<long long>();
+}
+}  // namespace
+
+TEST_F(DbTest, PgInjuryRepository_Create_PersistsInjuryTypeAndMuscleId) {
+    if (!available()) GTEST_SKIP() << "no test database reachable";
+
+    const long long userId = seedUser(tx(), "pg-injury-muscle@example.com");
+    const long long muscleId = findMuscleIdByName(tx(), "Hamstrings");
+    PgInjuryRepository repo(tx());
+
+    Injury injury = make(userId, "hamstring", "moderate");
+    injury.injuryType = "muscle";
+    injury.muscleId = muscleId;
+    const Injury saved = repo.create(injury);
+
+    EXPECT_EQ(saved.injuryType, "muscle");
+    EXPECT_EQ(saved.muscleId, muscleId);
+
+    const auto found = repo.findById(saved.id);
+    ASSERT_TRUE(found.has_value());
+    EXPECT_EQ(found->injuryType, "muscle");
+    EXPECT_EQ(found->muscleId, muscleId);
 }

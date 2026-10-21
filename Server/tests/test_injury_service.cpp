@@ -22,6 +22,7 @@ AddInjuryRequest addReq(long long userId, const std::string& region, const std::
     r.userId = userId;
     r.bodyRegion = region;
     r.severity = severity;
+    r.injuryType = "other";
     return r;
 }
 
@@ -80,4 +81,23 @@ TEST(InjuryService, Remove_OtherUsersInjury_ThrowsNotFound) {
     const Injury created = svc.add(addReq(1, "lower_back", "moderate"));
     EXPECT_THROW(svc.remove(2, created.id), InjuryNotFoundError);
     EXPECT_EQ(svc.list(1).size(), 1u);  // still there
+}
+
+TEST(InjuryService, Add_BadInjuryType_Throws) {
+    InMemoryInjuryRepository repo;
+    InjuryService svc(repo);
+    auto req = addReq(1, "lower_back", "moderate");
+    req.injuryType = "sprain";
+    EXPECT_THROW(svc.add(req), InjuryValidationError);
+}
+
+TEST(InjuryService, Update_ChangesInjuryType) {
+    InMemoryInjuryRepository repo;
+    InjuryService svc(repo);
+    const Injury created = svc.add(addReq(1, "shin", "mild"));
+
+    UpdateInjuryFields fields;
+    fields.injuryType = "bone";
+    const Injury updated = svc.update(1, created.id, fields);
+    EXPECT_EQ(updated.injuryType, "bone");
 }

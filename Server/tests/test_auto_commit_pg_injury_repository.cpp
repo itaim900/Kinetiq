@@ -34,6 +34,7 @@ TEST(AutoCommitPgInjuryRepositoryTest, CreateThenList_AcrossSeparateConnections)
     i.userId = userId;
     i.bodyRegion = "lower_back";
     i.severity = "moderate";
+    i.injuryType = "other";
     const Injury saved = injuries.create(i);
 
     const auto list = injuries.listByUser(userId);

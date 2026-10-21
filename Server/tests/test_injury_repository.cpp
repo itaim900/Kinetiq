@@ -16,6 +16,7 @@ Injury make(long long userId, const std::string& region, const std::string& seve
     i.userId = userId;
     i.bodyRegion = region;
     i.severity = severity;
+    i.injuryType = "other";
     return i;
 }
 
@@ -69,4 +70,19 @@ TEST(InMemoryInjuryRepositoryTest, DeleteById_RemovesInjury) {
     repo.deleteById(saved.id);
     EXPECT_FALSE(repo.findById(saved.id).has_value());
     EXPECT_TRUE(repo.listByUser(1).empty());
+}
+
+// injury_type/muscle_id round-trip with zero fake-code changes (stores the
+// whole Injury by value) -- guard it, same pattern as the profile fake test.
+TEST(InMemoryInjuryRepositoryTest, Create_PersistsInjuryTypeAndMuscleId) {
+    InMemoryInjuryRepository repo;
+    Injury i = make(1, "hamstring", "moderate");
+    i.injuryType = "muscle";
+    i.muscleId = 15;
+    const Injury saved = repo.create(i);
+
+    const auto found = repo.findById(saved.id);
+    ASSERT_TRUE(found.has_value());
+    EXPECT_EQ(found->injuryType, "muscle");
+    EXPECT_EQ(found->muscleId, 15);
 }

@@ -13,6 +13,14 @@ validation and an update cascade; HTTP layer extended + a new `MuscleController`
 
 **Tech Stack:** C++20, Crow (vendored `crow_all.h`), libpqxx, GoogleTest, CMake+Ninja (MSYS2 UCRT64 GCC).
 
+> **Execution note (2026-10-21):** Task 1 alone leaves 10 service/controller tests red (empty
+> `injury_type` now fails validation), which the new pre-commit hook blocks. To keep every commit
+> green, **Tasks 1 + 2 were done together, plus the `injury_type`-only plumbing pulled forward from
+> Tasks 5 and 7** (`AddInjuryRequest.injuryType`, `UpdateInjuryFields.injuryType`, DTO parse/emit,
+> test fixtures + `Add_BadInjuryType`, `Update_ChangesInjuryType`, `Create_BadInjuryType_Returns422`).
+> When doing Tasks 5 and 7, skip anything already present and add only the `muscle_id` parts.
+> Also: Task 1's expected count "16/16" is really 10/10 (5 existing + 5 new).
+
 **Spec:** [`docs/superpowers/specs/2026-07-25-injury-muscle-link-design.md`](../specs/2026-07-25-injury-muscle-link-design.md) (decisions E1–E6)
 
 ## Global Constraints

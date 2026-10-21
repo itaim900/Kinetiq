@@ -30,6 +30,18 @@ inline void requireValidInjury(const Injury& injury) {
     if (!severityOk) {
         throw InjuryValidationError("severity", "severity must be mild, moderate, or severe");
     }
+    const bool typeOk = injury.injuryType == "muscle" || injury.injuryType == "bone" ||
+                        injury.injuryType == "tendon_ligament" || injury.injuryType == "joint" ||
+                        injury.injuryType == "other";
+    if (!typeOk) {
+        throw InjuryValidationError(
+            "injury_type", "injury_type must be muscle, bone, tendon_ligament, joint, or other");
+    }
+    // Cross-field rule (E1/E4): a muscle link only makes sense for muscle-type
+    // injuries. muscle_id is never required even when injuryType == "muscle".
+    if (injury.muscleId.has_value() && injury.injuryType != "muscle") {
+        throw InjuryValidationError("muscle_id", "muscle_id is only valid when injury_type is muscle");
+    }
 }
 
 }  // namespace kinetiq::domain

@@ -55,7 +55,7 @@ TEST(InjuryControllerTest, Create_ValidInjury_Returns201AndAppearsInList) {
     const std::string token = registerAndGetToken(client, "inj-a@example.com");
 
     const auto created = client.post("/api/v1/users/me/injuries",
-                                     R"({"body_region":"lower_back","severity":"moderate"})",
+                                     R"({"body_region":"lower_back","severity":"moderate","injury_type":"other"})",
                                      {{"Authorization", "Bearer " + token}});
     EXPECT_EQ(created.code, 201);
 
@@ -65,6 +65,7 @@ TEST(InjuryControllerTest, Create_ValidInjury_Returns201AndAppearsInList) {
     ASSERT_TRUE(body);
     ASSERT_EQ(body.size(), 1u);
     EXPECT_EQ(std::string(body[0]["body_region"].s()), "lower_back");
+    EXPECT_EQ(std::string(body[0]["injury_type"].s()), "other");
 }
 
 TEST(InjuryControllerTest, Create_BadSeverity_Returns422) {
@@ -73,7 +74,7 @@ TEST(InjuryControllerTest, Create_BadSeverity_Returns422) {
     const std::string token = registerAndGetToken(client, "inj-b@example.com");
 
     const auto r = client.post("/api/v1/users/me/injuries",
-                               R"({"body_region":"lower_back","severity":"critical"})",
+                               R"({"body_region":"lower_back","severity":"critical","injury_type":"other"})",
                                {{"Authorization", "Bearer " + token}});
     EXPECT_EQ(r.code, 422);
 }
@@ -82,7 +83,7 @@ TEST(InjuryControllerTest, Create_Unauthenticated_Returns401) {
     InjuryApi api;
     kinetiq::testing::HttpClient client(api.app);
     const auto r = client.post("/api/v1/users/me/injuries",
-                               R"({"body_region":"lower_back","severity":"mild"})");
+                               R"({"body_region":"lower_back","severity":"mild","injury_type":"other"})");
     EXPECT_EQ(r.code, 401);
 }
 
@@ -93,7 +94,7 @@ TEST(InjuryControllerTest, Patch_OwnInjury_Returns200) {
     const auto created = crow::json::load(
         client
             .post("/api/v1/users/me/injuries",
-                  R"({"body_region":"lower_back","severity":"moderate"})",
+                  R"({"body_region":"lower_back","severity":"moderate","injury_type":"other"})",
                   {{"Authorization", "Bearer " + token}})
             .body);
     const long long id = created["id"].i();
@@ -112,7 +113,7 @@ TEST(InjuryControllerTest, Patch_OtherUsersInjury_Returns404) {
     const auto created = crow::json::load(
         client
             .post("/api/v1/users/me/injuries",
-                  R"({"body_region":"lower_back","severity":"moderate"})",
+                  R"({"body_region":"lower_back","severity":"moderate","injury_type":"other"})",
                   {{"Authorization", "Bearer " + tokenA}})
             .body);
     const long long id = created["id"].i();
@@ -131,7 +132,7 @@ TEST(InjuryControllerTest, Delete_OwnInjury_Returns204AndGone) {
     const auto created = crow::json::load(
         client
             .post("/api/v1/users/me/injuries",
-                  R"({"body_region":"lower_back","severity":"moderate"})",
+                  R"({"body_region":"lower_back","severity":"moderate","injury_type":"other"})",
                   {{"Authorization", "Bearer " + token}})
             .body);
     const long long id = created["id"].i();
@@ -154,7 +155,7 @@ TEST(InjuryControllerTest, Delete_OtherUsersInjury_Returns404) {
     const auto created = crow::json::load(
         client
             .post("/api/v1/users/me/injuries",
-                  R"({"body_region":"lower_back","severity":"moderate"})",
+                  R"({"body_region":"lower_back","severity":"moderate","injury_type":"other"})",
                   {{"Authorization", "Bearer " + tokenA}})
             .body);
     const long long id = created["id"].i();
@@ -163,4 +164,15 @@ TEST(InjuryControllerTest, Delete_OtherUsersInjury_Returns404) {
                                "/api/v1/users/me/injuries/" + std::to_string(id), "",
                                {{"Authorization", "Bearer " + tokenB}});
     EXPECT_EQ(r.code, 404);
+}
+
+TEST(InjuryControllerTest, Create_BadInjuryType_Returns422) {
+    InjuryApi api;
+    kinetiq::testing::HttpClient client(api.app);
+    const std::string token = registerAndGetToken(client, "inj-type@example.com");
+
+    const auto r = client.post("/api/v1/users/me/injuries",
+                               R"({"body_region":"shin","severity":"mild","injury_type":"sprain"})",
+                               {{"Authorization", "Bearer " + token}});
+    EXPECT_EQ(r.code, 422);
 }

@@ -23,6 +23,7 @@ struct AddInjuryRequest {
     long long userId = 0;
     std::string bodyRegion;
     std::string severity;
+    std::string injuryType;  // required: muscle|bone|tendon_ligament|joint|other
     std::optional<std::string> notes;
 };
 
@@ -30,6 +31,7 @@ struct AddInjuryRequest {
 struct UpdateInjuryFields {
     std::optional<std::string> bodyRegion;
     std::optional<std::string> severity;
+    std::optional<std::string> injuryType;
     std::optional<std::string> notes;
     std::optional<bool> active;
 };
@@ -45,6 +47,7 @@ public:
         injury.userId = req.userId;
         injury.bodyRegion = req.bodyRegion;
         injury.severity = req.severity;
+        injury.injuryType = req.injuryType;
         injury.notes = req.notes;
         injury.active = true;
         kinetiq::domain::requireValidInjury(injury);  // guard before persist
@@ -60,6 +63,7 @@ public:
         kinetiq::domain::Injury injury = requireOwned(userId, injuryId);
         if (fields.bodyRegion) injury.bodyRegion = *fields.bodyRegion;
         if (fields.severity) injury.severity = *fields.severity;
+        if (fields.injuryType) injury.injuryType = *fields.injuryType;
         if (fields.notes) injury.notes = fields.notes;
         if (fields.active) injury.active = *fields.active;
         kinetiq::domain::requireValidInjury(injury);  // guard before persist

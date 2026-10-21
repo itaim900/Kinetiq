@@ -18,6 +18,7 @@ inline kinetiq::app::AddInjuryRequest parseAddInjury(const crow::json::rvalue& b
     req.userId = userId;
     req.bodyRegion = std::string(body["body_region"].s());
     req.severity = std::string(body["severity"].s());
+    req.injuryType = std::string(body["injury_type"].s());
     if (body.has("notes")) req.notes = std::string(body["notes"].s());
     return req;
 }
@@ -27,6 +28,7 @@ inline kinetiq::app::UpdateInjuryFields parseUpdateInjury(const crow::json::rval
     kinetiq::app::UpdateInjuryFields fields;
     if (body.has("body_region")) fields.bodyRegion = std::string(body["body_region"].s());
     if (body.has("severity")) fields.severity = std::string(body["severity"].s());
+    if (body.has("injury_type")) fields.injuryType = std::string(body["injury_type"].s());
     if (body.has("notes")) fields.notes = std::string(body["notes"].s());
     if (body.has("active")) fields.active = body["active"].b();
     return fields;
@@ -38,6 +40,7 @@ inline crow::json::wvalue injuryToJson(const kinetiq::domain::Injury& injury) {
     json["user_id"] = injury.userId;
     json["body_region"] = injury.bodyRegion;
     json["severity"] = injury.severity;
+    json["injury_type"] = injury.injuryType;
     json["active"] = injury.active;
     json["notes"] = injury.notes ? crow::json::wvalue(*injury.notes) : crow::json::wvalue(nullptr);
     json["created_at"] = injury.createdAt;
