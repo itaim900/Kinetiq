@@ -1,5 +1,10 @@
 # Slice 2 · Stage B extension — Injury/Muscle Link: Design Spec
 
+> **⚠️ Partly superseded (2026-10-21)** by
+> [`2026-10-21-injury-conditions-catalog-design.md`](2026-10-21-injury-conditions-catalog-design.md):
+> E2, E4, E5 and the muscle half of E1 are replaced (injuries now link to **several** muscles via a
+> conditions catalog). `injury_type` (E1) and migration 0003 were built as described here.
+
 **Status:** Approved design (brainstormed 2026-07-25) — ready for implementation planning
 **Extends:** Stage B (`#20` injuries CRUD), already built and merged into branch `slice-2-profile`
 (not yet merged to `main`).

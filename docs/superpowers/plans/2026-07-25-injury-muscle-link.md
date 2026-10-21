@@ -1,5 +1,9 @@
 # Injury/Muscle Link Implementation Plan
 
+> **⚠️ Superseded after Task 2 (2026-10-21).** Tasks 1–2 are done (commit `2717e92`). **Do not
+> execute Tasks 3–8** — replaced by the plan for
+> [`2026-10-21-injury-conditions-catalog-design.md`](../specs/2026-10-21-injury-conditions-catalog-design.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Injuries can optionally reference a specific muscle from a small seeded catalog
