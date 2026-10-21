@@ -84,27 +84,17 @@ TEST(InjuryPolicy, AllFiveInjuryTypes_Accepted) {
     }
 }
 
-TEST(InjuryPolicy, MuscleIdWithNonMuscleType_Throws_FieldIsMuscleId) {
-    Injury i = validInjury();
-    i.injuryType = "bone";
-    i.muscleId = 7;
-    try {
-        requireValidInjury(i);
-        FAIL() << "expected InjuryValidationError";
-    } catch (const InjuryValidationError& e) {
-        EXPECT_EQ(e.field(), "muscle_id");
-    }
-}
-
-TEST(InjuryPolicy, MuscleIdWithMuscleType_DoesNotThrow) {
-    Injury i = validInjury();
-    i.injuryType = "muscle";
-    i.muscleId = 7;
-    EXPECT_NO_THROW(requireValidInjury(i));
-}
-
 TEST(InjuryPolicy, MuscleTypeWithoutMuscleId_DoesNotThrow) {
     Injury i = validInjury();
     i.injuryType = "muscle";  // muscleId left unset -- never required (E4)
+    EXPECT_NO_THROW(requireValidInjury(i));
+}
+
+// The July "muscles only for muscle-type injuries" rule is gone: a ligament
+// injury (e.g. ACL) still involves muscles.
+TEST(InjuryPolicy, LigamentInjuryWithMuscles_DoesNotThrow) {
+    Injury i = validInjury();
+    i.injuryType = "tendon_ligament";
+    i.muscles = {{1, "Quads", "secondary"}};
     EXPECT_NO_THROW(requireValidInjury(i));
 }

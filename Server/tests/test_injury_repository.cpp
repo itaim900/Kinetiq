@@ -72,17 +72,19 @@ TEST(InMemoryInjuryRepositoryTest, DeleteById_RemovesInjury) {
     EXPECT_TRUE(repo.listByUser(1).empty());
 }
 
-// injury_type/muscle_id round-trip with zero fake-code changes (stores the
-// whole Injury by value) -- guard it, same pattern as the profile fake test.
-TEST(InMemoryInjuryRepositoryTest, Create_PersistsInjuryTypeAndMuscleId) {
+// condition/muscles round-trip with zero fake-code changes (stores by value).
+TEST(InMemoryInjuryRepositoryTest, Create_PersistsConditionAndMuscles) {
     InMemoryInjuryRepository repo;
-    Injury i = make(1, "hamstring", "moderate");
+    Injury i = make(1, "thigh", "moderate");
     i.injuryType = "muscle";
-    i.muscleId = 15;
+    i.condition = kinetiq::domain::ConditionRef{4, "Hamstring strain", "NC76.30"};
+    i.muscles = {{15, "Hamstrings", "primary"}};
     const Injury saved = repo.create(i);
 
     const auto found = repo.findById(saved.id);
     ASSERT_TRUE(found.has_value());
-    EXPECT_EQ(found->injuryType, "muscle");
-    EXPECT_EQ(found->muscleId, 15);
+    ASSERT_TRUE(found->condition.has_value());
+    EXPECT_EQ(found->condition->name, "Hamstring strain");
+    ASSERT_EQ(found->muscles.size(), 1u);
+    EXPECT_EQ(found->muscles[0].name, "Hamstrings");
 }

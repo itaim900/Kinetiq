@@ -21,6 +21,12 @@ public:
     void deleteById(long long id) override;
 
 private:
+    // Fills injury.muscles: the catalog's muscles for a known condition, else
+    // the user's own picks (role "primary").
+    void loadMuscles(kinetiq::domain::Injury& injury);
+    // Rewrites user_injury_muscles for an unknown injury.
+    void writeUserMuscles(const kinetiq::domain::Injury& injury);
+
     pqxx::work& tx_;
 };
 

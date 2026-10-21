@@ -99,29 +99,92 @@ TEST_F(DbTest, PgInjuryRepository_DeleteById_Removes) {
 }
 
 namespace {
-long long findMuscleIdByName(pqxx::work& tx, const std::string& name) {
-    const auto result = tx.exec("SELECT id FROM muscles WHERE name = $1", pqxx::params{name});
-    return result[0][0].as<long long>();
+long long idOf(pqxx::work& tx, const std::string& sql, const std::string& key) {
+    return tx.exec(sql, pqxx::params{key})[0][0].as<long long>();
+}
+long long muscleId(pqxx::work& tx, const std::string& name) {
+    return idOf(tx, "SELECT id FROM muscles WHERE name = $1", name);
+}
+long long conditionIdOf(pqxx::work& tx, const std::string& slug) {
+    return idOf(tx, "SELECT id FROM injury_conditions WHERE slug = $1", slug);
 }
 }  // namespace
 
-TEST_F(DbTest, PgInjuryRepository_Create_PersistsInjuryTypeAndMuscleId) {
+TEST_F(DbTest, PgInjuryRepository_UnknownInjury_PersistsUserMuscles) {
     if (!available()) GTEST_SKIP() << "no test database reachable";
-
-    const long long userId = seedUser(tx(), "pg-injury-muscle@example.com");
-    const long long muscleId = findMuscleIdByName(tx(), "Hamstrings");
+    const long long userId = seedUser(tx(), "pg-injury-unknown@example.com");
+    const long long hamstrings = muscleId(tx(), "Hamstrings");
     PgInjuryRepository repo(tx());
 
     Injury injury = make(userId, "thigh", "moderate");
     injury.injuryType = "muscle";
-    injury.muscleId = muscleId;
+    injury.muscles = {{hamstrings, "Hamstrings", "primary"}};
     const Injury saved = repo.create(injury);
 
-    EXPECT_EQ(saved.injuryType, "muscle");
-    EXPECT_EQ(saved.muscleId, muscleId);
+    EXPECT_FALSE(saved.condition.has_value());
+    ASSERT_EQ(saved.muscles.size(), 1u);
+    EXPECT_EQ(saved.muscles[0].muscleId, hamstrings);
+    EXPECT_EQ(saved.muscles[0].name, "Hamstrings");
+    EXPECT_EQ(saved.muscles[0].role, "primary");
+}
+
+TEST_F(DbTest, PgInjuryRepository_KnownCondition_ReadsCatalogMuscles) {
+    if (!available()) GTEST_SKIP() << "no test database reachable";
+    const long long userId = seedUser(tx(), "pg-injury-known@example.com");
+    const long long acl = conditionIdOf(tx(), "acl_tear");
+    PgInjuryRepository repo(tx());
+
+    Injury injury = make(userId, "knee", "severe");
+    injury.injuryType = "tendon_ligament";
+    injury.condition = kinetiq::domain::ConditionRef{acl, "ACL tear", "NC93.62"};
+    const Injury saved = repo.create(injury);
 
     const auto found = repo.findById(saved.id);
     ASSERT_TRUE(found.has_value());
-    EXPECT_EQ(found->injuryType, "muscle");
-    EXPECT_EQ(found->muscleId, muscleId);
+    ASSERT_TRUE(found->condition.has_value());
+    EXPECT_EQ(found->condition->id, acl);
+    EXPECT_EQ(found->condition->name, "ACL tear");
+    EXPECT_EQ(found->condition->icd11Code, "NC93.62");
+    ASSERT_EQ(found->muscles.size(), 3u);  // from the catalog, not stored per user
+    for (const auto& m : found->muscles) EXPECT_EQ(m.role, "secondary");
+}
+
+TEST_F(DbTest, PgInjuryRepository_Update_ReplacesUserMuscles) {
+    if (!available()) GTEST_SKIP() << "no test database reachable";
+    const long long userId = seedUser(tx(), "pg-injury-replace@example.com");
+    const long long hamstrings = muscleId(tx(), "Hamstrings");
+    const long long quads = muscleId(tx(), "Quads");
+    PgInjuryRepository repo(tx());
+
+    Injury injury = make(userId, "thigh", "mild");
+    injury.injuryType = "muscle";
+    injury.muscles = {{hamstrings, "Hamstrings", "primary"}};
+    Injury saved = repo.create(injury);
+
+    saved.muscles = {{quads, "Quads", "primary"}};
+    repo.update(saved);
+    const auto found = repo.findById(saved.id);
+    ASSERT_TRUE(found.has_value());
+    ASSERT_EQ(found->muscles.size(), 1u);
+    EXPECT_EQ(found->muscles[0].name, "Quads");
+
+    saved.muscles.clear();
+    repo.update(saved);
+    EXPECT_TRUE(repo.findById(saved.id)->muscles.empty());
+}
+
+TEST_F(DbTest, PgInjuryRepository_Delete_CascadesUserMuscles) {
+    if (!available()) GTEST_SKIP() << "no test database reachable";
+    const long long userId = seedUser(tx(), "pg-injury-cascade@example.com");
+    PgInjuryRepository repo(tx());
+
+    Injury injury = make(userId, "thigh", "mild");
+    injury.injuryType = "muscle";
+    injury.muscles = {{muscleId(tx(), "Quads"), "Quads", "primary"}};
+    const Injury saved = repo.create(injury);
+    repo.deleteById(saved.id);
+
+    EXPECT_EQ(tx().exec("SELECT count(*) FROM user_injury_muscles WHERE injury_id = $1",
+                        pqxx::params{saved.id})[0][0].as<long long>(),
+              0);
 }

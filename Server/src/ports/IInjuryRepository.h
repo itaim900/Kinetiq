@@ -14,7 +14,9 @@ class IInjuryRepository {
 public:
     virtual ~IInjuryRepository() = default;
 
-    // Assigns an id (and created_at) and persists. Returns the stored injury.
+    // Assigns an id (and created_at) and persists, including condition_id and,
+    // for unknown injuries, the muscle set. Returns the stored injury as read
+    // back (condition name + muscle names/roles resolved).
     virtual domain::Injury create(const domain::Injury& injury) = 0;
 
     // All injuries belonging to userId (any active state), oldest first.
@@ -23,8 +25,9 @@ public:
     // Looks up by id regardless of owner (the caller checks ownership).
     virtual std::optional<domain::Injury> findById(long long id) = 0;
 
-    // Overwrites the mutable fields (body_region, severity, active, notes) of
-    // an existing injury matched by injury.id.
+    // Overwrites the mutable fields (body_region, severity, injury_type,
+    // active, notes) of an existing injury matched by injury.id and, for
+    // unknown injuries (no condition), replaces its muscle set.
     virtual void update(const domain::Injury& injury) = 0;
 
     // Removes the injury with this id (no-op if it doesn't exist).
