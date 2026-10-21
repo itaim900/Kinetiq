@@ -71,6 +71,10 @@ blocks the push.
 - Document in `CLAUDE.md` (Commands section) and `README.md` (Running locally).
 - Executable bit: commit the hook files with mode 755 (`git update-index --chmod=+x`) so they also
   run on Linux/macOS clones. Git for Windows runs them regardless.
+- **Line endings:** this machine has `core.autocrlf=true`, which would check scripts out with CRLF
+  endings; `sh` then fails on the stray `\r` (`bad interpreter: /bin/sh^M`). Add a root
+  `.gitattributes` with `.githooks/* text eol=lf` and `*.sh text eol=lf` so hook scripts are
+  always LF, on every OS.
 
 ## Verification (manual checklist, run once after implementation)
 1. Commit of docs-only change → allowed, no checks run.
