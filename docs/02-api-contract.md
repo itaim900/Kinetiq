@@ -134,16 +134,56 @@ Test cases:
 
 ## Injuries (drives the rule-based safety filter)
 
+An injury is either a **known condition** from the catalog (region, type and muscles come from
+the catalog and are **locked**) or an **unknown injury** the user describes. Design:
+`docs/superpowers/specs/2026-10-21-injury-conditions-catalog-design.md`.
+
 ### `GET /users/me/injuries` 🔒 — list
-### `POST /users/me/injuries` 🔒
-Request: `{ body_region, severity, notes }` → `201`
-### `PATCH /users/me/injuries/{id}` 🔒 — e.g. set `active: false` when healed
+### `POST /users/me/injuries` 🔒 → `201`
+Two request shapes:
+```jsonc
+// Known condition
+{ "condition_id": 1, "severity": "moderate", "notes": "optional" }
+// Unknown injury (muscle_ids optional; duplicates removed; role "primary")
+{ "body_region": "wrist_hand", "injury_type": "joint", "muscle_ids": [17, 18],
+  "severity": "mild", "notes": "optional" }
+```
+- `injury_type`: `muscle | bone | tendon_ligament | joint | other`; `body_region`: a slug from
+  `GET /body-regions`.
+- Known condition + any of `body_region` / `injury_type` / `muscle_ids` → `422` naming that field.
+### `PATCH /users/me/injuries/{id}` 🔒 → `200`
+Partial update. Known condition: only `severity`, `notes`, `active`; locked fields → `422`. To change
+the condition, delete and re-add. Unknown injury: also `body_region`, `injury_type`, `muscle_ids`
+(**replaces** the set; `[]` clears it).
 ### `DELETE /users/me/injuries/{id}` 🔒 → `204`
 
+Response (every injury):
+```jsonc
+{ "id": 7, "user_id": 3,
+  "condition": { "id": 1, "name": "ACL tear", "icd11_code": "NC93.62" },   // null if unknown
+  "body_region": "knee", "injury_type": "tendon_ligament", "severity": "moderate",
+  "muscles": [ { "id": 14, "name": "Quads", "role": "secondary" } ],     // primary first
+  "active": true, "notes": null, "created_at": "..." }
+```
+
 Test cases:
-- ✅ create injury → appears in list
-- ❌ `severity` not in `{mild,moderate,severe}` → `422`
+- ✅ create injury (either shape) → appears in list
+- ✅ known condition → region/type/muscles from the catalog
+- ❌ `severity` not in `{mild,moderate,severe}` / bad `injury_type` → `422`
+- ❌ unknown `condition_id`, `body_region` or muscle id → `422` naming the field
+- ❌ known condition + locked field (POST or PATCH) → `422` naming the field
 - ❌ PATCH/DELETE an injury owned by another user → `404` (do not leak existence)
+
+---
+
+## Reference catalog (read-only) 🔒
+
+### `GET /body-regions` — `[{slug, name}]` (14 fixed regions)
+### `GET /muscles` — `[{id, name, muscle_group}]` (28)
+### `GET /injury-conditions` — `[{id, slug, name, icd11_code|null, body_region, injury_type, muscles: [{id, name, role}]}]` (17)
+
+Conditions are general information, **not medical advice**; the UI must say so. ICD-11 codes and
+muscle sources are listed in the conditions-catalog spec. No token → `401`.
 
 ---
 

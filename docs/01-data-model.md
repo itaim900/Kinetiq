@@ -67,8 +67,10 @@ erDiagram
     User_Injuries {
         bigint id PK
         bigint user_id FK
-        text body_region
+        text body_region FK
         text severity
+        text injury_type
+        bigint condition_id FK
         boolean active
         text notes
     }
@@ -187,9 +189,27 @@ Many injuries per user. The rule-based safety layer JOINs this table to exclude 
 
 | Column | Type | Notes |
 |---|---|---|
-| `body_region` | `TEXT` | e.g. `lower_back`, `left_knee`. Must match values in `Exercise_Contraindications`. |
+| `body_region` | `TEXT` | FK → `Body_Regions(slug)` (e.g. `lower_back`, `knee`). Same list as `Exercise_Contraindications`, so the filter always matches. |
 | `severity` | `TEXT` | `CHECK IN ('mild','moderate','severe')` |
+| `injury_type` | `TEXT` | `CHECK IN ('muscle','bone','tendon_ligament','joint','other')` |
+| `condition_id` | `BIGINT` | Nullable FK → `Injury_Conditions`. Set = known condition (region/type copied from the catalog, muscles read from it). NULL = unknown injury. |
 | `active` | `BOOLEAN` | Inactive injuries are retained for history but excluded from the safety filter. |
+
+### `Body_Regions` (migration 0004)
+14 fixed regions (`slug` PK, `name`): neck, shoulder, upper_back, lower_back, chest, abdomen, elbow,
+wrist_hand, hip, groin, thigh, knee, lower_leg, ankle_foot. Referenced by `User_Injuries`,
+`Injury_Conditions` and `Exercise_Contraindications`.
+
+### `Injury_Conditions` + `Injury_Condition_Muscles` (migration 0004)
+Catalog of 17 known conditions (`slug`, `name`, nullable `icd11_code`, `body_region`, `injury_type`),
+each linked to the muscles it affects with `role CHECK IN ('primary','secondary')` (primary = the
+injured tissue; secondary = involved / to protect). Sources and review notes:
+`docs/superpowers/specs/2026-10-21-injury-conditions-catalog-design.md`. Not medical advice.
+
+### `User_Injury_Muscles` (migration 0005)
+`(injury_id, muscle_id)` — the muscles a user picked for an **unknown** injury (`condition_id` NULL).
+`ON DELETE CASCADE` from `User_Injuries`. Known injuries have no rows here (their muscles come from
+the catalog). Replaces 0003's single `muscle_id` column.
 
 ---
 
@@ -198,7 +218,7 @@ Normalised muscle entities. Required for the volume-tracking and variety algorit
 
 `Exercise_Muscles.role`: `CHECK IN ('primary','secondary')`
 
-Seed data includes all major muscle groups: pectorals, anterior/lateral/posterior deltoid, biceps, triceps, lats, traps, rhomboids, erector spinae, rectus abdominis, obliques, glutes, quads, hamstrings, calves.
+Seed data (migrations 0003 + 0004, 28 muscles): pectorals, anterior/lateral/posterior deltoid, biceps, triceps, lats, traps, rhomboids, erector spinae, rectus abdominis, obliques, glutes, quads, hamstrings, calves, plus supraspinatus, infraspinatus, teres minor, subscapularis, forearm flexors, forearm extensors, tibialis anterior, adductors, hip flexors, gluteus medius, levator scapulae, sternocleidomastoid.
 
 ---
 

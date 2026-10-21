@@ -25,7 +25,15 @@ For durable/architectural facts, also update `docs/CONTEXT.md` (and add an ADR w
   from GoogleTest's `[  SKIPPED ] N` line, because the binary exits 0 when DB tests skip). All 7
   spec scenarios verified (docs-only skip, failing test blocks, per-half selection, DB-down
   warn/block, healthy push).
-- Next: injury/muscle link plan, Task 1.
+- **Injury type (July plan Tasks 1–2):** migration 0003 + `injury_type` through every layer; done
+  together so every commit stayed green under the new hook.
+- **Redesign → injury conditions catalog (brainstorm → spec → plan → 6 TDD tasks):** injuries now
+  affect several muscles. 17 ICD-11-anchored known conditions (locked region/type/muscles) or
+  unknown injuries (user picks from 14 fixed regions + 28 muscles). Migrations 0004 (catalog) +
+  0005 (injury link); `ICatalogRepository` + Pg adapters; `InjuryService` two shapes; 3 new GET
+  endpoints. 171/171 tests, 0 skipped; live-verified with curl. No open injury→muscle database
+  exists; secondary muscles are our judgement (flagged for physio review).
+- Next: Stage C (#25) — React profile + injuries forms with the not-medical-advice notice.
 
 ## 2026-07-25 — VS Code (3)
 - **Reviewed Stages A+B with the owner** (architecture walkthrough, JWT trade-offs/cookie

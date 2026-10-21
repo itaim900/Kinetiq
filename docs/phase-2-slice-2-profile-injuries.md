@@ -180,13 +180,48 @@ empty list `[]` → no-token `401`. Test user + injuries cleaned up (FK cascade)
 
 **Stage B result:** `ctest` **122/122** (up from 94 after Stage A), live-verified. `#20` done.
 
+### Stage B extension — Injury conditions catalog (2026-10-21)
+
+**Part 1 — `injury_type` (July plan, Tasks 1–2, commit `2717e92`).** Migration `0003` added
+`injury_type` (5-value CHECK) and a single optional `muscle_id`, seeded 16 muscles. Task 1 alone
+left 10 tests red (empty `injury_type` now invalid), which the new pre-commit hook would block, so
+Tasks 1+2 plus the `injury_type` plumbing through service + DTO were done together. Every commit green.
+
+**Part 2 — redesign: several muscles per injury.** Owner wanted injuries to reflect their real
+medical effect. Re-brainstormed (spec `2026-10-21-injury-conditions-catalog-design.md`, superseding
+July's E2/E4/E5): a catalog of 17 known conditions, each anchored to a WHO ICD-11 code (14/17; 3
+not found, left NULL) and mapped to several muscles with a role (primary = injured tissue,
+secondary = involved / to protect). **Known condition = locked** (region, type, muscles come from
+the catalog); **unknown injury** = user picks region (fixed list of 14), type and muscles. Research
+found no open database mapping injuries → muscles; SNOMED CT "finding site" only gives the primary
+structure, so secondary muscles are project judgement pending physio review.
+
+Built in 5 TDD tasks (plan `2026-10-21-injury-conditions-catalog.md`):
+1. `ICatalogRepository` port + domain types + in-memory fake (`b712262`).
+2. Migration `0004` (body regions + FKs, 28 muscles, 17 conditions, 34 muscle links) +
+   `PgCatalogRepository` / `AutoCommitPgCatalogRepository`; tests pin the exact counts because a
+   mistyped muscle name would silently drop a link (`1940210`).
+3. Migration `0005` (drop `muscle_id`; add `condition_id`, `user_injury_muscles`) + `Injury`
+   gains `condition` + `muscles`; `PgInjuryRepository` reads muscles from the catalog or the user's
+   picks (`a4cc43e`).
+4. `InjuryService(injuries, catalog)`: the two shapes, locked fields → 422 naming the field,
+   region/muscle existence checks, de-duplication (`44b5849`).
+5. `CatalogController` (`GET /body-regions`, `/muscles`, `/injury-conditions`) + new injury JSON
+   (`066db8c`).
+
+*Plan deviation:* two migrations (0004 catalog, 0005 injury link) instead of one, so the catalog
+commit stayed green before the injury tables changed.
+
+**Verified:** `kinetiq_tests` **171/171, 0 skipped**; migrations checked with `psql`; live `curl`:
+ACL tear → 201 with `NC93.62` + 3 secondary muscles; ACL + `body_region` → 422 on that field;
+unknown wrist injury → 201 with `condition: null`, `muscles: []`; `left_knee` → 422; no token → 401.
+
 ---
 
 ## What's next
 
-**Injury/muscle link (Stage B extension)** is designed and planned (spec + 8-task plan, both
-committed) but **not yet executed** — pick up with Task 1 (migration + domain) next session,
-executing inline (owner's preference, for visibility into each red→green→commit step). Then
-**Stage C (`#25` frontend)**: profile + injuries forms (first React Hook Form + Zod in this
-codebase), whose injury form can now build a muscle picker against `GET /muscles` once the
-extension lands. Merge `slice-2-profile` → `main` when the whole slice is complete and verified.
+**Stage C (`#25` frontend):** profile + injuries forms (first React Hook Form + Zod in this
+codebase). The injury form: pick a known condition from `GET /injury-conditions` (shows its
+muscles, read-only) **or** "other" → region dropdown + type + muscle picker from `GET /muscles`.
+Must show a "general information, not medical advice" notice wherever conditions appear. Then
+merge `slice-2-profile` → `main`.
