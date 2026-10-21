@@ -179,3 +179,101 @@ TEST(InjuryControllerTest, Create_BadInjuryType_Returns422) {
                                {{"Authorization", "Bearer " + token}});
     EXPECT_EQ(r.code, 422);
 }
+
+TEST(InjuryControllerTest, Create_KnownCondition_Returns201WithCatalogData) {
+    InjuryApi api;
+    kinetiq::testing::HttpClient client(api.app);
+    const std::string token = registerAndGetToken(client, "inj-known@example.com");
+
+    const auto r = client.post("/api/v1/users/me/injuries",
+                               R"({"condition_id":1,"severity":"moderate"})",
+                               {{"Authorization", "Bearer " + token}});
+    EXPECT_EQ(r.code, 201);
+    const auto body = crow::json::load(r.body);
+    ASSERT_TRUE(body);
+    EXPECT_EQ(std::string(body["condition"]["name"].s()), "Hamstring strain");
+    EXPECT_EQ(std::string(body["condition"]["icd11_code"].s()), "NC76.30");
+    EXPECT_EQ(std::string(body["body_region"].s()), "thigh");
+    ASSERT_EQ(body["muscles"].size(), 2u);
+    EXPECT_EQ(std::string(body["muscles"][0]["name"].s()), "Hamstrings");
+    EXPECT_EQ(std::string(body["muscles"][0]["role"].s()), "primary");
+}
+
+TEST(InjuryControllerTest, Create_KnownConditionWithLockedField_Returns422NamingField) {
+    InjuryApi api;
+    kinetiq::testing::HttpClient client(api.app);
+    const std::string token = registerAndGetToken(client, "inj-locked@example.com");
+
+    const auto r = client.post("/api/v1/users/me/injuries",
+                               R"({"condition_id":1,"severity":"mild","muscle_ids":[2]})",
+                               {{"Authorization", "Bearer " + token}});
+    EXPECT_EQ(r.code, 422);
+    const auto body = crow::json::load(r.body);
+    ASSERT_TRUE(body);
+    EXPECT_TRUE(body["errors"].has("muscle_ids"));
+}
+
+TEST(InjuryControllerTest, Create_UnknownWithMuscleIds_Returns201Deduplicated) {
+    InjuryApi api;
+    kinetiq::testing::HttpClient client(api.app);
+    const std::string token = registerAndGetToken(client, "inj-muscles@example.com");
+
+    const auto r = client.post(
+        "/api/v1/users/me/injuries",
+        R"({"body_region":"thigh","injury_type":"muscle","severity":"mild","muscle_ids":[2,2,3]})",
+        {{"Authorization", "Bearer " + token}});
+    EXPECT_EQ(r.code, 201);
+    const auto body = crow::json::load(r.body);
+    EXPECT_EQ(body["condition"].t(), crow::json::type::Null);
+    EXPECT_EQ(body["muscles"].size(), 2u);
+}
+
+TEST(InjuryControllerTest, Create_UnknownMuscleId_Returns422) {
+    InjuryApi api;
+    kinetiq::testing::HttpClient client(api.app);
+    const std::string token = registerAndGetToken(client, "inj-badmuscle@example.com");
+
+    const auto r = client.post(
+        "/api/v1/users/me/injuries",
+        R"({"body_region":"thigh","injury_type":"muscle","severity":"mild","muscle_ids":[999]})",
+        {{"Authorization", "Bearer " + token}});
+    EXPECT_EQ(r.code, 422);
+    EXPECT_TRUE(crow::json::load(r.body)["errors"].has("muscle_ids"));
+}
+
+TEST(InjuryControllerTest, Patch_KnownCondition_InjuryType_Returns422) {
+    InjuryApi api;
+    kinetiq::testing::HttpClient client(api.app);
+    const std::string token = registerAndGetToken(client, "inj-patch-known@example.com");
+    const auto created = crow::json::load(
+        client
+            .post("/api/v1/users/me/injuries", R"({"condition_id":1,"severity":"mild"})",
+                  {{"Authorization", "Bearer " + token}})
+            .body);
+    const long long id = created["id"].i();
+
+    const auto r = client.send(crow::HTTPMethod::Patch,
+                               "/api/v1/users/me/injuries/" + std::to_string(id),
+                               R"({"injury_type":"bone"})", {{"Authorization", "Bearer " + token}});
+    EXPECT_EQ(r.code, 422);
+    EXPECT_TRUE(crow::json::load(r.body)["errors"].has("injury_type"));
+}
+
+TEST(InjuryControllerTest, Patch_Unknown_MuscleIdsEmpty_ClearsMuscles) {
+    InjuryApi api;
+    kinetiq::testing::HttpClient client(api.app);
+    const std::string token = registerAndGetToken(client, "inj-clear@example.com");
+    const auto created = crow::json::load(
+        client
+            .post("/api/v1/users/me/injuries",
+                  R"({"body_region":"thigh","injury_type":"muscle","severity":"mild","muscle_ids":[2]})",
+                  {{"Authorization", "Bearer " + token}})
+            .body);
+    const long long id = created["id"].i();
+
+    const auto r = client.send(crow::HTTPMethod::Patch,
+                               "/api/v1/users/me/injuries/" + std::to_string(id),
+                               R"({"muscle_ids":[]})", {{"Authorization", "Bearer " + token}});
+    EXPECT_EQ(r.code, 200);
+    EXPECT_EQ(crow::json::load(r.body)["muscles"].size(), 0u);
+}

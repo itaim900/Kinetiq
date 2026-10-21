@@ -15,6 +15,7 @@
 #include "adapters/db/Migrator.h"
 #include "config/Env.h"
 #include "http/controllers/AuthController.h"
+#include "http/controllers/CatalogController.h"
 #include "http/controllers/InjuryController.h"
 #include "http/controllers/UserController.h"
 
@@ -105,6 +106,7 @@ int main() {
     kinetiq::http::registerAuthRoutes(app, users, hasher, tokens);
     kinetiq::http::registerUserRoutes(app, users, tokens);
     kinetiq::http::registerInjuryRoutes(app, injuries, catalog, tokens);
+    kinetiq::http::registerCatalogRoutes(app, catalog, tokens);
 
     // Bind to 127.0.0.1 by default (safe for local dev). In containers set
     // BIND_ADDR=0.0.0.0 so other containers (e.g. the frontend) can reach it.
