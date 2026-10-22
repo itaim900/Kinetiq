@@ -42,3 +42,6 @@ docs/learning/
 .DS_Store
 Thumbs.db
 *.swp
+
+# Brainstorming mockups (visual companion)
+.superpowers/
