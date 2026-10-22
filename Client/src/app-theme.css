@@ -1,0 +1,84 @@
+/* Logged-in app theme: same "Momentum" palette as auth-theme.css. */
+:root {
+  --app-bg: #14161a;
+  --app-surface: #1b1e23;
+  --app-surface-2: rgba(255, 255, 255, 0.045);
+  --app-accent: #ff6a4d;
+  --app-accent-soft: rgba(255, 106, 77, 0.14);
+  --app-ink: #f1efec;
+  --app-muted: #a8a29b;
+  --app-line: rgba(241, 239, 236, 0.1);
+}
+
+.app {
+  min-height: 100vh;
+  background: var(--app-bg);
+  color: var(--app-ink);
+  font-family: system-ui, sans-serif;
+}
+
+.app-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--app-line);
+}
+.app-logo { font-weight: 700; color: var(--app-accent); }
+.app-tabs { display: flex; gap: 0.25rem; flex: 1; }
+.app-tab { color: var(--app-muted); text-decoration: none; padding: 0.35rem 0.75rem; border-radius: 8px; }
+.app-tab.active { color: var(--app-accent); background: var(--app-accent-soft); }
+.app-user { color: var(--app-muted); }
+.app-logout, .app button { font: inherit; }
+.app-logout { background: none; border: 1px solid var(--app-line); color: var(--app-ink); border-radius: 8px; padding: 0.3rem 0.7rem; cursor: pointer; }
+
+.app-main { max-width: 640px; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+.page-head { display: flex; justify-content: space-between; align-items: center; }
+.muted { color: var(--app-muted); }
+.notice { color: var(--app-muted); font-size: 0.85rem; border-left: 2px solid var(--app-accent); padding-left: 0.5rem; }
+.field-error { color: #ff8a78; font-size: 0.85rem; margin: 0.25rem 0; }
+
+.app button.primary { background: var(--app-accent); color: #1a0d08; border: none; border-radius: 8px; padding: 0.45rem 1rem; font-weight: 600; cursor: pointer; }
+.app button { background: var(--app-surface-2); color: var(--app-ink); border: 1px solid var(--app-line); border-radius: 8px; padding: 0.35rem 0.75rem; cursor: pointer; }
+.app button.link { background: none; border: none; color: var(--app-accent); padding: 0; }
+
+.injury-card, .injury-form, .profile-form fieldset {
+  background: var(--app-surface);
+  border: 1px solid var(--app-line);
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+  margin: 0.75rem 0;
+}
+.injury-card h3, .injury-form h3 { margin: 0 0 0.25rem; }
+.card-actions { display: flex; gap: 0.5rem; align-items: center; margin-top: 0.6rem; }
+
+.pills { list-style: none; padding: 0; margin: 0.4rem 0 0; display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.pill { border-radius: 999px; padding: 0.1rem 0.6rem; font-size: 0.8rem; }
+.pill-primary { background: var(--app-accent-soft); color: var(--app-accent); }
+.pill-secondary { background: var(--app-surface-2); color: var(--app-muted); }
+
+.locked { border: 1px dashed var(--app-line); border-radius: 10px; padding: 0.6rem 0.8rem; margin: 0.5rem 0; }
+.condition-results { list-style: none; padding: 0; margin: 0.4rem 0; display: grid; gap: 0.25rem; }
+.condition-results button { width: 100%; text-align: left; }
+.condition-results .unlisted { color: var(--app-accent); font-style: italic; }
+
+.app input, .app select, .app textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--app-surface-2);
+  color: var(--app-ink);
+  border: 1px solid var(--app-line);
+  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+  font: inherit;
+}
+.app input[type='radio'], .app input[type='checkbox'] { width: auto; margin-right: 0.35rem; }
+.app fieldset { border: none; padding: 0; margin: 0.6rem 0; }
+.app legend, .app label { display: block; color: var(--app-muted); margin: 0.5rem 0 0.25rem; }
+.choice { display: inline-flex !important; align-items: center; margin-right: 0.8rem !important; color: var(--app-ink) !important; }
+.chip { display: inline-flex !important; align-items: center; border: 1px solid var(--app-line); border-radius: 999px; padding: 0.1rem 0.6rem; margin: 0.15rem 0.25rem 0 0 !important; color: var(--app-ink) !important; }
+.chip-on { border-color: var(--app-accent); color: var(--app-accent) !important; }
+.muscle-group-name { display: block; color: var(--app-muted); font-size: 0.8rem; text-transform: capitalize; margin-top: 0.4rem; }
+.form-actions { display: flex; gap: 0.5rem; margin-top: 0.8rem; }
+.healed summary { cursor: pointer; color: var(--app-muted); margin-top: 1rem; }
+.auth-notice { color: var(--auth-accent); }

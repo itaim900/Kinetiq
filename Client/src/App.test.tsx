@@ -7,6 +7,7 @@ import { getToken, saveToken } from './lib/tokenStorage';
 
 describe('App', () => {
   beforeEach(() => {
+    window.history.pushState({}, '', '/');
     localStorage.clear();
   });
 
@@ -33,8 +34,11 @@ describe('App', () => {
 
     render(<App />);
 
-    expect(await screen.findByText(/ivy@example.com/i)).toBeInTheDocument();
-    expect(screen.getByText('Ivy')).toBeInTheDocument();
+    expect(await screen.findByText('Ivy')).toBeInTheDocument();
+    // "/" redirects to "/injuries" a moment after the shell appears; wait for
+    // the page so the active-tab check happens after the redirect.
+    expect(await screen.findByRole('heading', { name: 'My injuries' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Injuries' })).toHaveAttribute('aria-current', 'page');
   });
 
   it('clears an invalid/expired token and falls back to the login form', async () => {
@@ -60,12 +64,41 @@ describe('App', () => {
     fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'StrongPass1' } });
     fireEvent.click(screen.getByRole('button', { name: /^log in$/i }));
 
-    expect(await screen.findByText(/jill@example.com/i)).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'My injuries' })).toBeInTheDocument();
     expect(getToken()).toBe('fake-jwt-token');
 
     fireEvent.click(screen.getByRole('button', { name: /log out/i }));
 
     expect(await screen.findByRole('button', { name: /^log in$/i })).toBeInTheDocument();
     expect(getToken()).toBeNull();
+  });
+
+  it('switches pages with the tabs and highlights the active one', async () => {
+    saveToken('valid-token');
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: 'My injuries' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Injuries' })).toHaveAttribute('aria-current', 'page');
+
+    fireEvent.click(screen.getByRole('link', { name: 'Profile' }));
+    expect(await screen.findByRole('heading', { name: 'Profile' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Profile' })).toHaveAttribute('aria-current', 'page');
+    expect(window.location.pathname).toBe('/profile');
+  });
+
+  it('sends unknown paths to the injuries page', async () => {
+    window.history.pushState({}, '', '/no-such-page');
+    saveToken('valid-token');
+    render(<App />);
+    expect(await screen.findByRole('heading', { name: 'My injuries' })).toBeInTheDocument();
+  });
+
+  it('shows the app name Kinetiq in the top bar', async () => {
+    saveToken('valid-token');
+    render(<App />);
+    // Wait for the logged-in shell (the login card also says "Kinetiq" while
+    // the session restores), then check the top-bar logo specifically.
+    expect(await screen.findByRole('navigation', { name: 'Main' })).toBeInTheDocument();
+    expect(screen.getByText('Kinetiq', { selector: '.app-logo' })).toBeInTheDocument();
   });
 });
