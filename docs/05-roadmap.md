@@ -1,4 +1,4 @@
-# Roadmap & Milestones — KinetiQ
+# Roadmap & Milestones — Kinetiq
 
 **Status:** Approved (design phase)
 **Last updated:** 2026-06-24

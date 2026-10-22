@@ -1,4 +1,4 @@
-# Data Model — KinetiQ
+# Data Model — Kinetiq
 
 **Status:** Approved (design phase)
 **Last updated:** 2026-06-23

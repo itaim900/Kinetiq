@@ -1,10 +1,10 @@
-# KinetiQ
+# Kinetiq
 
 An AI-powered web application that helps people create personalized workout plans.
 
 ## Overview
 
-KinetiQ uses an AI agent to generate workout plans tailored to a user's goals,
+Kinetiq uses an AI agent to generate workout plans tailored to a user's goals,
 experience level, available equipment, and schedule.
 
 - **Backend:** C++ (Crow + libpqxx), built with CMake + Ninja on the MSYS2 UCRT64 toolchain

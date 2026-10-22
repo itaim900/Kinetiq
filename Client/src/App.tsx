@@ -59,7 +59,7 @@ export default function App() {
           )}
         </div>
         <div className="auth-card">
-          <h1>KinetiQ</h1>
+          <h1>Kinetiq</h1>
           <p className="auth-tagline">Plan your training. Track your progress.</p>
           {isRestoringSession ? (
             <p>Checking session…</p>
@@ -80,7 +80,7 @@ export default function App() {
         margin: '0 auto',
       }}
     >
-      <h1>KinetiQ</h1>
+      <h1>Kinetiq</h1>
       <p>Walking skeleton — the React frontend talking to the C++ backend.</p>
 
       <section

@@ -1,4 +1,4 @@
-# KinetiQ — context brief (for humans & AI agents)
+# Kinetiq — context brief (for humans & AI agents)
 
 Dense summary to bring a new agent up to speed cheaply. For detail, follow the linked docs.
 

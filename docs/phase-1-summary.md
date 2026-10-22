@@ -38,7 +38,7 @@ Final acceptance test, run 2026-07-05 (images pulled **anonymously** from public
 | All containers up | ✅ postgres (healthy), backend, frontend |
 | `http://localhost:3000/api/v1/health` (via nginx proxy) | ✅ `{"db":"connected","status":"ok"}` |
 | `http://localhost:8080/api/v1/health` (backend direct) | ✅ `{"db":"connected","status":"ok"}` |
-| `http://localhost:3000/` (SPA served) | ✅ page title "KinetiQ" |
+| `http://localhost:3000/` (SPA served) | ✅ page title "Kinetiq" |
 | CI on `main` | ✅ green (backend + frontend) |
 | Publish images on `main` | ✅ both images built & pushed |
 

@@ -24,7 +24,7 @@ Feature work follows a spec → plan → TDD-execute flow; specs and plans live 
 `docs/phase-2-slice-*.md`.
 
 ## Project one-liner
-AI-powered personalized workout-plan web app (KinetiQ). **Server:** C++20 / Crow / libpqxx /
+AI-powered personalized workout-plan web app (Kinetiq). **Server:** C++20 / Crow / libpqxx /
 PostgreSQL 16. **Client:** React 18 + TypeScript + Vite. Hexagonal architecture.
 
 ## Commands
