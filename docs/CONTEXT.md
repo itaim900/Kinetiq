@@ -260,11 +260,16 @@ in `docs/phase-2-slice-2-profile-injuries.md`; design in the spec (8 locked deci
   0 skipped**; live-verified. Spec `superpowers/specs/2026-10-21-injury-conditions-catalog-design.md`
   (supersedes July E2/E4/E5), plan `superpowers/plans/2026-10-21-injury-conditions-catalog.md`.
   Secondary-muscle mappings are project judgement, pending physio review.
-- **Stage C — #25 Frontend: NEXT.** Profile + injuries forms (React Hook Form + Zod — first use of
-  either). Injury form: pick a known condition (`GET /injury-conditions`, its muscles shown
-  read-only) **or** "other" → region dropdown + type + muscle picker. Must show a
-  "general information, not medical advice" notice. Plan: deps + `api.ts` + MSW → `ProfileForm` →
-  `InjuriesPanel` → `App` navigation → browser-automation verify. Then merge `slice-2-profile` → `main`.
+- **Stage C — #25 Frontend: IN PROGRESS (Tasks 1–3 of 9 done, 2026-10-22).** Designed with browser
+  mockups: top bar with Injuries/Profile tabs, one searchable condition field ("My injury isn't
+  listed…" → region/type/muscles), inline forms, not-medical-advice notice. Spec
+  `superpowers/specs/2026-10-22-stage-c-frontend-design.md`, plan
+  `superpowers/plans/2026-10-22-stage-c-frontend.md`. Done: T1 rename **KinetiQ → Kinetiq**
+  (display text; GitHub repo links unchanged), T2 libs (react-router 7.18.4, react-hook-form
+  7.90.0, zod 3.25.76, @hookform/resolvers 5.9.2, exact) + `authFetch`/`ApiError`/401 handler +
+  typed API + stateful MSW (`resetMockDb`), T3 `AppShell` + routing + session-expired logout
+  (pages are stubs). Client tests 31/31. **Next session starts at Task 4** (injury cards list).
+  Then merge `slice-2-profile` → `main` after Task 9 (owner's go-ahead).
 
 **Carry-overs worth remembering:**
 - Reuse the `AutoCommitPgUserRepository` pattern (connection-per-call, not one shared long-lived

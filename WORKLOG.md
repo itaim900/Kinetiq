@@ -10,6 +10,19 @@ For durable/architectural facts, also update `docs/CONTEXT.md` (and add an ADR w
 
 ---
 
+## 2026-10-22 — VS Code
+- **Pushed** the injury conditions catalog (pre-push full check green) and demoed it live through
+  the Vite proxy (rotator cuff strain + an unlisted wrist injury).
+- **Stage C designed** (brainstorm with browser mockups → spec → 9-task plan): tabs layout,
+  single searchable condition field, inline forms, React Router + plain fetch (no TanStack Query),
+  rename to **Kinetiq**. Owner wants a `docs/backlog.md` for "later, not never" ideas (Task 9).
+- **Built Tasks 1–3:** rename (15 display occurrences; repo links kept), libs + `authFetch` +
+  typed API + stateful MSW, app shell + routing + 401 logout. Client 31/31, server 171/171.
+- Lesson: a redirect happens a moment *after* the shell renders — tests must wait for the page
+  heading before checking the active tab (two failures fixed, re-run 3x stable).
+- Unpushed commits on `slice-2-profile`. `npm audit` warnings on dev tooling → backlog.
+- Next: Stage C **Task 4** (injury cards, healed section, mark healed, delete confirm).
+
 ## 2026-10-21 — VS Code
 - **Expanded `CLAUDE.md`** (via `/init`): kept the session rules and added build/test commands
   (including how to run a single GoogleTest or Vitest test), env vars, the server hexagonal layout
