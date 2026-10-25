@@ -101,4 +101,18 @@ describe('App', () => {
     expect(await screen.findByRole('navigation', { name: 'Main' })).toBeInTheDocument();
     expect(screen.getByText('Kinetiq', { selector: '.app-logo' })).toBeInTheDocument();
   });
+
+  it('logs out with a message when the session has expired', async () => {
+    saveToken('stale-token');
+    server.use(
+      http.get('/api/v1/users/me/injuries', () =>
+        HttpResponse.json({ detail: 'Missing, invalid, or expired token.' }, { status: 401 }),
+      ),
+    );
+    render(<App />);
+
+    expect(await screen.findByText(/your session expired/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^log in$/i })).toBeInTheDocument();
+    expect(getToken()).toBeNull();
+  });
 });
