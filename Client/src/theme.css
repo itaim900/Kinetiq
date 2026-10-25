@@ -1,0 +1,54 @@
+/* Colour tokens. data-theme on <html> (set by lib/theme.ts and the inline
+   script in index.html) picks the set; every other stylesheet uses var(--…). */
+:root,
+:root[data-theme='light'] {
+  --bg: #faf8f5;
+  --surface: #ffffff;
+  --surface-2: #f1eeea;
+  --ink: #1d1b19;
+  --muted: #6b655e;
+  --line: #e7e2dc;
+  --accent: #1d1b19;
+  --accent-ink: #ffffff;
+  --accent-soft: #ebe7e2;
+  --error: #c62828;
+  --error-soft: rgba(198, 40, 40, 0.08);
+  --glow: #d8d1c8;
+  --glow-2: #e9e3db;
+  --card-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --bg: #14161a;
+  --surface: #1b1e23;
+  --surface-2: rgba(255, 255, 255, 0.045);
+  --ink: #f1efec;
+  --muted: #a8a29b;
+  --line: rgba(241, 239, 236, 0.1);
+  --accent: #ffffff;
+  --accent-ink: #14161a;
+  --accent-soft: rgba(255, 255, 255, 0.12);
+  --error: #ff6b6b;
+  --error-soft: rgba(255, 107, 107, 0.12);
+  --glow: #ffffff;
+  --glow-2: #8a8f99;
+  --card-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.theme-toggle {
+  font: inherit;
+  background: none;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  cursor: pointer;
+}

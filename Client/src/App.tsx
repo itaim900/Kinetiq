@@ -9,6 +9,7 @@ import {
   type HealthStatus,
 } from './api';
 import AppShell from './AppShell';
+import ThemeToggle from './ThemeToggle';
 import AuthPage from './features/auth/AuthPage';
 import InjuriesPage from './features/injuries/InjuriesPage';
 import ProfilePage from './features/profile/ProfilePage';
@@ -81,6 +82,7 @@ export default function App() {
               </span>
             </>
           )}
+          <ThemeToggle />
         </div>
         <div className="auth-card">
           <h1>Kinetiq</h1>
