@@ -92,4 +92,4 @@ dev proxy → C++ Crow backend → libpqxx → PostgreSQL, with `GET /api/v1/hea
 DB status, GoogleTest and Vitest harnesses wired, and the first migration applied. **CI** builds and
 tests both halves on every push, and the app is **containerized** (images published to GHCR, full
 stack via `docker-compose.prod.yml`). Next: Phase 2 (core domain). See
-[`docs/05-roadmap.md`](./docs/05-roadmap.md) and the [issues](https://github.com/itaim900/KinetiQ/issues).
+[`docs/05-roadmap.md`](./docs/05-roadmap.md) and the [issues](https://github.com/itaim900/Kinetiq/issues).

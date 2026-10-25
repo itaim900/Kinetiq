@@ -140,8 +140,8 @@ health check. All real features start in **Phase 2**.
 
 ## 8. Links
 
-- Repo: https://github.com/itaim900/KinetiQ
-- Actions: https://github.com/itaim900/KinetiQ/actions
+- Repo: https://github.com/itaim900/Kinetiq
+- Actions: https://github.com/itaim900/Kinetiq/actions
 - Images: `ghcr.io/itaim900/kinetiq-backend`, `ghcr.io/itaim900/kinetiq-frontend`
 - Merge PR: #39
 - Related docs: `01-data-model.md`, `02-api-contract.md`, `03-llm-port.md`, `04-architecture.md`,

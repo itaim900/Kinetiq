@@ -230,8 +230,8 @@ port/fake → green → refactor.
   `session-log-phase1-spike.md`
 
 ## GitHub
-Repo `itaim900/KinetiQ` (private). Backlog = **4 milestones** (Phase 0–3) + **38 issues** + labels.
-Actions: https://github.com/itaim900/KinetiQ/actions
+Repo `itaim900/Kinetiq` (private). Backlog = **4 milestones** (Phase 0–3) + **38 issues** + labels.
+Actions: https://github.com/itaim900/Kinetiq/actions
 
 ## How to run
 See `docs/learning/how-to-run.md`. Two ways:
