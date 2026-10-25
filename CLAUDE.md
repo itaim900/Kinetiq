@@ -34,13 +34,16 @@ Local toolchain is **MSYS2 UCRT64 GCC + CMake + Ninja**. `C:\msys64\ucrt64\bin` 
 ```sh
 docker compose up -d                       # (repo root) dev Postgres on 5432; needed for server + DB tests
 cmake --preset default                     # configure into Server/build (Debug)
-cmake --build --preset default             # builds kinetiq_server + kinetiq_tests
+cmake --build --preset default -j 2        # builds kinetiq_server + kinetiq_tests (-j 2: see below)
 ctest --test-dir build --output-on-failure # full suite
 ./build/kinetiq_tests.exe --gtest_filter='InjuryService*'   # one suite / test (GoogleTest filter)
 ctest --test-dir build -R InjuryController                  # or filter via ctest regex
 ```
 - When a build gates the next command, check the real exit code (`; echo exit=$?`), not a piped
   `tail`, which masks failures.
+- **Limit parallel jobs (`-j 2`)** on this 8 GB machine: a wide rebuild with Ninja's default
+  parallelism ran out of memory (`cc1plus.exe: out of memory`). The git hooks do this already
+  (`KINETIQ_BUILD_JOBS`, default 2).
 - **New `.cpp` files must be added by hand** to the explicit source lists in
   `Server/CMakeLists.txt` (`kinetiq_server` and/or `kinetiq_tests`). There is no glob.
 - CMake options: `KINETIQ_FETCH_LIBPQXX` (ON in CI/Docker: builds libpqxx 7.9.2 from source

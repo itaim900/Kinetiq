@@ -76,7 +76,10 @@ require_client_deps() {
 # Small wrappers so run_step gets a single command. The ( ... ) subshell keeps
 # the `cd` from leaking into the rest of the hook.
 server_configure() { (cd Server && cmake --preset default); }
-server_build()     { (cd Server && cmake --build --preset default); }
+# Cap parallel compile jobs: each job loads the big Crow header, and a wide
+# rebuild with Ninja's default parallelism ran out of memory on this 8 GB
+# machine. Override with KINETIQ_BUILD_JOBS=4 (etc.) on a bigger machine.
+server_build()     { (cd Server && cmake --build --preset default -j "${KINETIQ_BUILD_JOBS:-2}"); }
 server_tests() {
   # .exe on Windows, no extension on Linux.
   if [ -f Server/build/kinetiq_tests.exe ]; then
