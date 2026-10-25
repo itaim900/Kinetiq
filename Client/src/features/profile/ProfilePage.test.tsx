@@ -1,10 +1,12 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { useState } from 'react';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 import ProfilePage from './ProfilePage';
 import { UnitsContext, type UnitsValue } from '../../lib/UnitsContext';
 import { server } from '../../mocks/server';
 import { saveToken } from '../../lib/tokenStorage';
+import type { Units } from '../../lib/units';
 
 const metric: UnitsValue = { units: 'metric', setUnits: async () => {}, error: null };
 const imperial: UnitsValue = { units: 'imperial', setUnits: async () => {}, error: null };
@@ -130,5 +132,29 @@ describe('ProfilePage', () => {
     renderPage();
     await screen.findByLabelText('Height (cm)');
     expect(screen.queryByLabelText('Units')).not.toBeInTheDocument();
+  });
+
+  // Regression (found in the Stage C browser check): after saving, switching
+  // units rebuilt the form from the profile loaded when the page opened, so the
+  // just-saved values disappeared.
+  it('keeps just-saved values when the units change', async () => {
+    function Harness() {
+      const [units, setUnits] = useState<Units>('metric');
+      return (
+        <UnitsContext.Provider value={{ units, setUnits: async (u) => setUnits(u), error: null }}>
+          <button type="button" onClick={() => setUnits('imperial')}>
+            to imperial
+          </button>
+          <ProfilePage />
+        </UnitsContext.Provider>
+      );
+    }
+    render(<Harness />);
+    fireEvent.change(await screen.findByLabelText('Weight (kg)'), { target: { value: '80' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save profile' }));
+    await screen.findByText('Profile saved.');
+
+    fireEvent.click(screen.getByRole('button', { name: 'to imperial' }));
+    expect(await screen.findByLabelText('Weight (lb)')).toHaveValue('176.4'); // 80 kg
   });
 });

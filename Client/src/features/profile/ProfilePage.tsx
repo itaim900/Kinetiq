@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getProfile, updateProfile, type Profile } from '../../api';
+import { getProfile, updateProfile, type Profile, type ProfileUpdate } from '../../api';
 import { useUnits } from '../../lib/UnitsContext';
 import ProfileForm from './ProfileForm';
 
@@ -14,6 +14,14 @@ export default function ProfilePage() {
       .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
   }, []);
 
+  // Keep the page's copy current: switching units rebuilds the form from it,
+  // so it must reflect the latest save (not what was loaded on page open).
+  async function save(update: ProfileUpdate): Promise<Profile> {
+    const updated = await updateProfile(update);
+    setProfile(updated);
+    return updated;
+  }
+
   return (
     <section className="page" aria-labelledby="profile-title">
       <h2 id="profile-title">Profile</h2>
@@ -21,7 +29,7 @@ export default function ProfilePage() {
       {!error && !profile && <p>Loading…</p>}
       {/* key={units}: switching units rebuilds the form, so it re-shows the
           saved values converted (unsaved edits are dropped on a switch). */}
-      {profile && <ProfileForm key={units} profile={profile} units={units} onSave={updateProfile} />}
+      {profile && <ProfileForm key={units} profile={profile} units={units} onSave={save} />}
     </section>
   );
 }
