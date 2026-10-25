@@ -23,3 +23,8 @@ accepted; if a decision changes, add a new ADR that supersedes the old one.
 | [0010](./0010-frontend-stack.md) | Frontend stack: React + TypeScript + Vite | Accepted |
 | [0011](./0011-web-framework-crow.md) | C++ web framework: Crow (supersedes 0003) | Accepted |
 | [0012](./0012-toolchain-msys2.md) | Toolchain: MSYS2 UCRT64 + prebuilt deps (supersedes 0005) | Accepted |
+| [0013](./0013-authenticator-function-not-middleware.md) | Auth is a plain function, not Crow middleware | Accepted |
+| [0014](./0014-load-modify-save-patch.md) | PATCH = load-modify-validate-save | Accepted |
+| [0015](./0015-autocommit-repository-pattern.md) | Two-layer repositories (Pg + AutoCommit) | Accepted |
+| [0016](./0016-injury-conditions-catalog.md) | Injuries via conditions catalog (known = locked) | Accepted |
+| [0017](./0017-merge-patch-clearing-and-profile-history.md) | JSON Merge Patch clearing + profile history | Accepted |
