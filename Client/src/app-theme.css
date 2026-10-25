@@ -82,3 +82,8 @@
 .form-actions { display: flex; gap: 0.5rem; margin-top: 0.8rem; }
 .healed summary { cursor: pointer; color: var(--app-muted); margin-top: 1rem; }
 .auth-notice { color: var(--ink); }
+.units-toggle { display: inline-flex; gap: 0; align-items: center; }
+.app .units-option { border-radius: 0; padding: 0.25rem 0.6rem; }
+.app .units-option:first-child { border-radius: 999px 0 0 999px; }
+.app .units-option:nth-child(2) { border-radius: 0 999px 999px 0; }
+.app .units-option.active { background: var(--accent); color: var(--accent-ink); }

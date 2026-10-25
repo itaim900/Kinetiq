@@ -10,6 +10,7 @@ import {
 } from './api';
 import AppShell from './AppShell';
 import ThemeToggle from './ThemeToggle';
+import { UnitsProvider } from './lib/UnitsContext';
 import AuthPage from './features/auth/AuthPage';
 import InjuriesPage from './features/injuries/InjuriesPage';
 import ProfilePage from './features/profile/ProfilePage';
@@ -105,13 +106,15 @@ export default function App() {
   // Logged in: the router decides which page fills the shell's <Outlet/>.
   return (
     <BrowserRouter>
-      <Routes>
-        <Route element={<AppShell user={currentUser} onLogout={handleLogout} />}>
-          <Route path="/injuries" element={<InjuriesPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="*" element={<Navigate to="/injuries" replace />} />
-        </Route>
-      </Routes>
+      <UnitsProvider>
+        <Routes>
+          <Route element={<AppShell user={currentUser} onLogout={handleLogout} />}>
+            <Route path="/injuries" element={<InjuriesPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="*" element={<Navigate to="/injuries" replace />} />
+          </Route>
+        </Routes>
+      </UnitsProvider>
     </BrowserRouter>
   );
 }

@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router';
 import type { AuthUser } from './api';
 import ThemeToggle from './ThemeToggle';
+import UnitsToggle from './UnitsToggle';
 
 interface AppShellProps {
   user: AuthUser;
@@ -24,6 +25,7 @@ export default function AppShell({ user, onLogout }: AppShellProps) {
             Profile
           </NavLink>
         </nav>
+        <UnitsToggle />
         <ThemeToggle />
         <span className="app-user">{user.display_name}</span>
         <button type="button" className="app-logout" onClick={onLogout}>
