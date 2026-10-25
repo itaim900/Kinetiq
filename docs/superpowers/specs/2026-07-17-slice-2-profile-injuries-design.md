@@ -52,6 +52,9 @@ The service `findById`s the current user, applies only the present fields, then 
 `update()`. Costs one extra `SELECT` per PATCH — negligible.
 
 ### D3 — Update semantics: absent = unchanged, present = set. No null-clearing in v1.
+> ⚠️ **Superseded 2026-10-25** by ADR-0017: `null` now clears a field (JSON Merge Patch), and
+> changes are recorded in `user_profile_history`.
+
 Sending a field sets it; omitting it leaves it alone. Explicitly **not** supporting "send `null` to
 erase a field" (e.g. clear your saved weight) — it complicates the optional model for a rare need.
 Deferred; addable later.

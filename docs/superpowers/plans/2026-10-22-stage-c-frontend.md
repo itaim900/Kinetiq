@@ -2490,7 +2490,13 @@ git commit -m "feat(client): profile form mirroring ProfilePolicy, sends only ch
 4. Edit the ACL card → severity Moderate → Save → card updated. Mark the wrist injury healed → "Healed (1)". Delete it (confirm).
 5. **Profile** tab → URL `/profile` → set height 180, weight 75, experience Intermediate → Save → "Profile saved." → refresh page → still on `/profile`, values kept.
 6. Browser back button → returns to `/injuries`.
-7. Take a screenshot of each tab; check the console has no errors.
+7. **Themes:** toggle ☾/☀ on the login screen and in the app; reload → the choice is kept; both
+   themes readable (pills: primary filled, secondary outlined).
+8. **Units:** switch Metric → Imperial → Profile shows `in` / `lb` and the "= 5 ft 10 in" hint;
+   reload → still imperial (saved to the account).
+9. **Clearing:** empty the weight, save → note names the last saved weight; DB row in
+   `user_profile_history` with the old value.
+10. Take a screenshot of each tab in both themes; check the console has no errors.
 Then delete the test user:
 `docker exec kinetiq-postgres psql -U kinetiq -d kinetiq -c "delete from users where email='stagec-verify@example.com'"`. Stop the server + client.
 
@@ -2523,11 +2529,22 @@ One list of things deliberately deferred, so nothing is lost. Pull from here whe
 ## Frontend
 - TanStack Query (caching / refetching) when screens multiply
 - Offline support
+- Upgrade the dev toolchain: Vite 5 → 8, Vitest 2 → 5 (clears the 6 remaining dev-only `npm audit`
+  advisories, incl. esbuild dev-server exposure — until then, don't browse untrusted sites while
+  `npm run dev` runs)
 
 ## Ops
-- Rename GitHub repo `itaim900/KinetiQ` → `Kinetiq` (optional; GitHub redirects old links)
-- Fix Docker Compose project-name clash after the folder rename (`docker compose up -d`)
+- Delete the old Docker volumes kept as a backup (`fitapp_kinetiq_pgdata`, `fitapp_fitapp_pgdata`,
+  `kinetiq_kinetiq_pgdata`) once confident in `kinetiq_pgdata`
 - ADRs for Phase 2 decisions (authenticator-not-middleware, load-modify-save, …)
+
+## Product & legal (owner, 2026-10-25)
+- **Forgot password** (email infrastructure: provider, reset tokens with expiry, two screens)
+- **Subscription idea:** $5.99/month, refunded after 10 verified workouts — needs payments
+  (e.g. Stripe), refunds, and **workout verification** (gym progress tracking); depends on Slice 4
+- **User agreement / privacy policy:** disclose that cleared profile values are kept in history and
+  may still be used for training plans (ADR-0017)
+- **"Delete my data"** — real erasure (account + profile history), ties into account deletion
 
 ## Owner's ideas
 - (add yours here)

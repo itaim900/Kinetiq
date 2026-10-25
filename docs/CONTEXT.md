@@ -261,16 +261,19 @@ in `docs/phase-2-slice-2-profile-injuries.md`; design in the spec (8 locked deci
   0 skipped**; live-verified. Spec `superpowers/specs/2026-10-21-injury-conditions-catalog-design.md`
   (supersedes July E2/E4/E5), plan `superpowers/plans/2026-10-21-injury-conditions-catalog.md`.
   Secondary-muscle mappings are project judgement, pending physio review.
-- **Stage C — #25 Frontend: IN PROGRESS (Tasks 1–3 of 9 done, 2026-10-22).** Designed with browser
-  mockups: top bar with Injuries/Profile tabs, one searchable condition field ("My injury isn't
-  listed…" → region/type/muscles), inline forms, not-medical-advice notice. Spec
-  `superpowers/specs/2026-10-22-stage-c-frontend-design.md`, plan
-  `superpowers/plans/2026-10-22-stage-c-frontend.md`. Done: T1 rename **KinetiQ → Kinetiq**
-  (display text; GitHub repo links unchanged), T2 libs (react-router 7.18.4, react-hook-form
-  7.90.0, zod 3.25.76, @hookform/resolvers 5.9.2, exact) + `authFetch`/`ApiError`/401 handler +
-  typed API + stateful MSW (`resetMockDb`), T3 `AppShell` + routing + session-expired logout
-  (pages are stubs). Client tests 31/31. **Next session starts at Task 4** (injury cards list).
-  Then merge `slice-2-profile` → `main` after Task 9 (owner's go-ahead).
+- **Stage C — #25 Frontend: Tasks 1–8 of 9 done + additions (2026-10-25).** Spec
+  `superpowers/specs/2026-10-22-stage-c-frontend-design.md`, plan `…/plans/2026-10-22-stage-c-frontend.md`.
+  Built: rename **Kinetiq**; `authFetch`/`ApiError`/401 logout; typed API + stateful MSW; `AppShell`
+  with Injuries/Profile tabs (react-router 7); injuries list/cards/healed/delete-confirm; injury form
+  (searchable condition, locked catalog muscles, unlisted path, muscle chips); profile form.
+  **Additions** (spec `…/specs/2026-10-25-themes-units-clearing-design.md`, plan
+  `…/plans/2026-10-25-themes-units-clearing.md`, all 12 tasks done): repo renamed `itaim900/Kinetiq`;
+  Compose fixed; `npm audit` → 0 production advisories (**zod upgraded to 4.6.7**); ADRs 0013–0017;
+  light/night themes (monochrome accent, toggle); app-wide **Metric | Imperial** switch (server stays
+  metric); `PATCH /users/me` = JSON Merge Patch (`null` clears) + `user_profile_history`
+  (migration 0006). Client 93/93, server 184/184.
+  **Next: Stage C Task 9** — browser check of everything (incl. themes/units/clearing), slice build
+  log, `docs/backlog.md`, then merge `slice-2-profile` → `main` (owner's go-ahead).
 
 **Carry-overs worth remembering:**
 - Reuse the `AutoCommitPgUserRepository` pattern (connection-per-call, not one shared long-lived

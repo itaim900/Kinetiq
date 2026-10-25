@@ -111,6 +111,8 @@ describing its role.
   Don't introduce Crow middleware on routes.
 - Ownership: accessing another user's resource returns **404**, not 403. Login failures are a
   generic 401 (no email enumeration).
+- `PATCH /users/me` is **JSON Merge Patch** (`null` clears; ADR-0017); every changed profile field is
+  recorded via `IProfileHistoryRepository` (`user_profile_history`, migration 0006).
 - All routes are under `/api/v1`. The REST contract, including test cases, is
   `docs/02-api-contract.md`; it is contract-first, so update it with any endpoint change.
 
@@ -132,7 +134,16 @@ port/fake, go green, refactor.
 - `features/<area>/`: components with co-located `*.test.tsx` (e.g. `features/auth/`).
 - `lib/tokenStorage.ts`: JWT persisted in `localStorage`; `App.tsx` restores the session on load.
 - `mocks/handlers.ts` + `mocks/server.ts`: MSW handlers used by tests (wired in `test/setup.ts`).
-  Add a handler for every new endpoint the UI calls.
+  Add a handler for every new endpoint the UI calls. They're **stateful** (`resetMockDb()` after
+  each test, `seedInjury`, `setMockProfile`).
+- Routing: `react-router` v7 in `App.tsx`; `AppShell` (top bar + tabs) wraps `/injuries`, `/profile`.
+- All authenticated calls go through `authFetch` in `api.ts` (Bearer token, `ApiError` with
+  per-field errors; a 401 triggers the logout handler `App` registers).
+- Forms: React Hook Form + Zod; rules and request converters live in pure `*Schema.ts` modules
+  (`features/injuries/injurySchema.ts`, `features/profile/profileSchema.ts`).
+- Themes: colour tokens in `theme.css`, switched by `data-theme` on `<html>` (`lib/theme.ts`; an
+  inline script in `index.html` prevents a flash). Units: `lib/UnitsContext.tsx` (`useUnits()`,
+  saved as the account's `unit_preference`); server stores **metric only**, `lib/units.ts` converts.
 
 ## Conventions to respect (see `docs/CONTEXT.md` for the reasoning)
 - Source lives in `Server/` and `Client/` only; never recreate `backend/` or `frontend/` folders

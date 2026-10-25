@@ -124,8 +124,15 @@ Partial update. Request (any subset):
 `{ height_cm, weight_kg, birth_date, sex, experience_level, unit_preference,
    weekly_workout_goal, available_time_minutes, preferences, medications }`
 
+**JSON Merge Patch (RFC 7396):** an absent key = unchanged, a value = set it, **`null` = clear it**.
+`unit_preference` can't be cleared (`422`). Values are always **metric** (the client converts for
+imperial display). Every changed field except `unit_preference` is recorded in
+`user_profile_history` (old → new, with a timestamp) — see ADR-0017.
+
 Test cases:
 - ✅ partial update changes only provided fields → `200`
+- ✅ `{"weight_kg": null}` clears it → `200` with `"weight_kg": null`
+- ❌ `{"unit_preference": null}` → `422` naming `unit_preference`
 - ❌ `weight_kg` negative or out of range → `422`
 - ❌ `experience_level` not in `{beginner,intermediate,advanced}` → `422`
 - ❌ unauthenticated → `401`
@@ -154,7 +161,7 @@ Two request shapes:
 ### `PATCH /users/me/injuries/{id}` 🔒 → `200`
 Partial update. Known condition: only `severity`, `notes`, `active`; locked fields → `422`. To change
 the condition, delete and re-add. Unknown injury: also `body_region`, `injury_type`, `muscle_ids`
-(**replaces** the set; `[]` clears it).
+(**replaces** the set; `[]` clears it). `"notes": null` (or `""`) clears the notes.
 ### `DELETE /users/me/injuries/{id}` 🔒 → `204`
 
 Response (every injury):

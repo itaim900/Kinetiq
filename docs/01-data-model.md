@@ -213,6 +213,15 @@ the catalog). Replaces 0003's single `muscle_id` column.
 
 ---
 
+### `User_Profile_History` (migration 0006)
+Append-only log of profile changes: `user_id` (FK → `Users`, `ON DELETE CASCADE`), `field`
+(`CHECK` in the 8 tracked profile fields — not `unit_preference`), `old_value`, `new_value` (text),
+`changed_at`. Lets the app keep using a cleared value's **last known value** for training plans
+(ADR-0017); must be disclosed in the user agreement and erased by a future "delete my data".
+Index on `(user_id, field, changed_at)`.
+
+---
+
 ### `Muscles` + `Exercise_Muscles`
 Normalised muscle entities. Required for the volume-tracking and variety algorithms (Phase 5).
 
