@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ports/ITokenService.h"
+#include "ports/IProfileHistoryRepository.h"
 #include "ports/IUserRepository.h"
 
 #include "crow_all.h"
@@ -11,6 +12,7 @@ namespace kinetiq::http {
 // AuthController's pattern) so routes stay testable via HttpClient. Kept
 // separate from AuthController: /auth/* is authentication, /users/* is profile.
 void registerUserRoutes(crow::SimpleApp& app, kinetiq::ports::IUserRepository& users,
+                        kinetiq::ports::IProfileHistoryRepository& history,
                         kinetiq::ports::ITokenService& tokens);
 
 }  // namespace kinetiq::http

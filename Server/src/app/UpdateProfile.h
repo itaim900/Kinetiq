@@ -2,10 +2,13 @@
 
 #include "domain/ProfilePolicy.h"
 #include "domain/User.h"
+#include "ports/IProfileHistoryRepository.h"
 #include "ports/IUserRepository.h"
 
+#include <map>
 #include <optional>
 #include <set>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 
@@ -37,11 +40,39 @@ struct ProfileUpdate {
     std::set<std::string> clear;
 };
 
+namespace detail {
+inline std::optional<std::string> asText(const std::optional<std::string>& v) { return v; }
+inline std::optional<std::string> asText(const std::optional<double>& v) {
+    if (!v) return std::nullopt;
+    std::ostringstream os;
+    os << *v;  // 72.5 -> "72.5" (std::to_string would give "72.500000")
+    return os.str();
+}
+inline std::optional<std::string> asText(const std::optional<int>& v) {
+    return v ? std::optional<std::string>(std::to_string(*v)) : std::nullopt;
+}
+// The 8 tracked fields, keyed by wire name (unit_preference deliberately excluded).
+inline std::map<std::string, std::optional<std::string>> trackedValues(
+    const kinetiq::domain::User& u) {
+    return {{"sex", asText(u.sex)},
+            {"birth_date", asText(u.birthDate)},
+            {"height_cm", asText(u.heightCm)},
+            {"weight_kg", asText(u.weightKg)},
+            {"experience_level", asText(u.experienceLevel)},
+            {"weekly_workout_goal", asText(u.weeklyWorkoutGoal)},
+            {"available_time_minutes", asText(u.availableTimeMinutes)},
+            {"medications", asText(u.medications)}};
+}
+}  // namespace detail
+
 // Use case: load the current user, apply the provided fields, validate the
-// resulting profile, persist. Depends only on the repository port.
+// resulting profile, persist, then record each changed field in the history.
+// Depends only on ports.
 class UpdateProfile {
 public:
-    explicit UpdateProfile(kinetiq::ports::IUserRepository& users) : users_(users) {}
+    UpdateProfile(kinetiq::ports::IUserRepository& users,
+                  kinetiq::ports::IProfileHistoryRepository& history)
+        : users_(users), history_(history) {}
 
     kinetiq::domain::User execute(long long userId, const ProfileUpdate& update) {
         auto found = users_.findById(userId);
@@ -50,6 +81,7 @@ public:
         }
 
         kinetiq::domain::User user = *found;
+        const auto before = detail::trackedValues(user);
         if (update.clear.count("unit_preference")) {
             throw kinetiq::domain::ProfileValidationError(
                 "unit_preference", "unit_preference can't be cleared (it must be metric or imperial)");
@@ -76,11 +108,19 @@ public:
         kinetiq::domain::requireValidProfile(user);
 
         users_.update(user);
+
+        // Record each tracked field that actually changed (ADR-0017). Not
+        // atomic with the save above (ADR-0015).
+        for (const auto& [field, after] : detail::trackedValues(user)) {
+            const auto& old = before.at(field);
+            if (old != after) history_.record(userId, field, old, after);
+        }
         return user;
     }
 
 private:
     kinetiq::ports::IUserRepository& users_;
+    kinetiq::ports::IProfileHistoryRepository& history_;
 };
 
 }  // namespace kinetiq::app

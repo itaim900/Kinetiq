@@ -9,10 +9,11 @@
 namespace kinetiq::http {
 
 void registerUserRoutes(crow::SimpleApp& app, kinetiq::ports::IUserRepository& users,
+                        kinetiq::ports::IProfileHistoryRepository& history,
                         kinetiq::ports::ITokenService& tokens) {
     CROW_ROUTE(app, "/api/v1/users/me")
         .methods(crow::HTTPMethod::Get, crow::HTTPMethod::Patch)(
-            [&users, &tokens](const crow::request& req) -> crow::response {
+            [&users, &history, &tokens](const crow::request& req) -> crow::response {
                 const auto currentUser = authenticate(req, tokens);
                 if (!currentUser.has_value()) {
                     return dto::errorResponse(401, "unauthenticated", "Unauthorized",
@@ -35,7 +36,7 @@ void registerUserRoutes(crow::SimpleApp& app, kinetiq::ports::IUserRepository& u
                                               "Request body is not valid JSON.");
                 }
 
-                kinetiq::app::UpdateProfile updateProfile(users);
+                kinetiq::app::UpdateProfile updateProfile(users, history);
                 try {
                     const auto updated =
                         updateProfile.execute(currentUser->userId, dto::parseProfileUpdate(body));

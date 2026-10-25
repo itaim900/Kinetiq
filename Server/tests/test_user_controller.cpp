@@ -12,6 +12,7 @@
 #include "adapters/crypto/JwtTokenService.h"
 #include "http/controllers/AuthController.h"
 #include "http/controllers/UserController.h"
+#include "support/InMemoryProfileHistoryRepository.h"
 #include "support/InMemoryUserRepository.h"
 
 using kinetiq::crypto::Argon2PasswordHasher;
@@ -24,12 +25,13 @@ namespace {
 struct UserApi {
     crow::SimpleApp app;
     InMemoryUserRepository users;
+    kinetiq::testsupport::InMemoryProfileHistoryRepository history;
     Argon2PasswordHasher hasher;
     JwtTokenService tokens{"test-secret", std::chrono::seconds(3600)};
 
     UserApi() {
         kinetiq::http::registerAuthRoutes(app, users, hasher, tokens);
-        kinetiq::http::registerUserRoutes(app, users, tokens);
+        kinetiq::http::registerUserRoutes(app, users, history, tokens);
     }
 };
 

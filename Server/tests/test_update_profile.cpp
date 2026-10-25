@@ -7,6 +7,7 @@
 #include "app/UpdateProfile.h"
 #include "domain/ProfilePolicy.h"
 #include "domain/User.h"
+#include "support/InMemoryProfileHistoryRepository.h"
 #include "support/InMemoryUserRepository.h"
 
 using kinetiq::app::ProfileUpdate;
@@ -14,6 +15,7 @@ using kinetiq::app::ProfileUserNotFoundError;
 using kinetiq::app::UpdateProfile;
 using kinetiq::domain::ProfileValidationError;
 using kinetiq::domain::User;
+using kinetiq::testsupport::InMemoryProfileHistoryRepository;
 using kinetiq::testsupport::InMemoryUserRepository;
 
 namespace {
@@ -37,7 +39,8 @@ TEST(UpdateProfile, PartialUpdate_ChangesOnlyProvidedFields) {
     ProfileUpdate update;
     update.weightKg = 72.5;  // only weight provided
 
-    UpdateProfile useCase(repo);
+    InMemoryProfileHistoryRepository history;
+    UpdateProfile useCase(repo, history);
     const User result = useCase.execute(id, update);
 
     EXPECT_EQ(result.weightKg, 72.5);
@@ -57,7 +60,8 @@ TEST(UpdateProfile, InvalidValue_Throws_AndPersistsNothing) {
     ProfileUpdate update;
     update.weightKg = -5.0;  // invalid
 
-    UpdateProfile useCase(repo);
+    InMemoryProfileHistoryRepository history;
+    UpdateProfile useCase(repo, history);
     EXPECT_THROW(useCase.execute(id, update), ProfileValidationError);
 
     const auto persisted = repo.findById(id);
@@ -67,7 +71,8 @@ TEST(UpdateProfile, InvalidValue_Throws_AndPersistsNothing) {
 
 TEST(UpdateProfile, UnknownUser_ThrowsProfileUserNotFound) {
     InMemoryUserRepository repo;
-    UpdateProfile useCase(repo);
+    InMemoryProfileHistoryRepository history;
+    UpdateProfile useCase(repo, history);
     ProfileUpdate update;
     update.weightKg = 70.0;
     EXPECT_THROW(useCase.execute(999999, update), ProfileUserNotFoundError);
@@ -79,7 +84,8 @@ TEST(UpdateProfile, ClearField_EmptiesIt) {
 
     ProfileUpdate update;
     update.clear.insert("experience_level");
-    UpdateProfile useCase(repo);
+    InMemoryProfileHistoryRepository history;
+    UpdateProfile useCase(repo, history);
     const User result = useCase.execute(id, update);
 
     EXPECT_FALSE(result.experienceLevel.has_value());
@@ -91,11 +97,54 @@ TEST(UpdateProfile, ClearUnitPreference_Throws_OnThatField) {
     const long long id = seedUser(repo);
     ProfileUpdate update;
     update.clear.insert("unit_preference");
-    UpdateProfile useCase(repo);
+    InMemoryProfileHistoryRepository history;
+    UpdateProfile useCase(repo, history);
     try {
         useCase.execute(id, update);
         FAIL() << "expected ProfileValidationError";
     } catch (const ProfileValidationError& e) {
         EXPECT_EQ(e.field(), "unit_preference");
     }
+}
+
+TEST(UpdateProfile, RecordsOnlyChangedFields) {
+    InMemoryUserRepository repo;
+    InMemoryProfileHistoryRepository history;
+    const long long id = seedUser(repo);  // experience_level = "beginner"
+
+    ProfileUpdate update;
+    update.weightKg = 72.5;
+    update.experienceLevel = "beginner";  // same value -> no row
+    UpdateProfile(repo, history).execute(id, update);
+
+    ASSERT_EQ(history.entries.size(), 1u);
+    EXPECT_EQ(history.entries[0].userId, id);
+    EXPECT_EQ(history.entries[0].field, "weight_kg");
+    EXPECT_FALSE(history.entries[0].oldValue.has_value());
+    EXPECT_EQ(history.entries[0].newValue, "72.5");
+}
+
+TEST(UpdateProfile, ClearingRecordsTheOldValue) {
+    InMemoryUserRepository repo;
+    InMemoryProfileHistoryRepository history;
+    const long long id = seedUser(repo);
+
+    ProfileUpdate update;
+    update.clear.insert("experience_level");
+    UpdateProfile(repo, history).execute(id, update);
+
+    ASSERT_EQ(history.entries.size(), 1u);
+    EXPECT_EQ(history.entries[0].field, "experience_level");
+    EXPECT_EQ(history.entries[0].oldValue, "beginner");
+    EXPECT_FALSE(history.entries[0].newValue.has_value());
+}
+
+TEST(UpdateProfile, UnitPreferenceIsNotTracked) {
+    InMemoryUserRepository repo;
+    InMemoryProfileHistoryRepository history;
+    const long long id = seedUser(repo);
+    ProfileUpdate update;
+    update.unitPreference = "imperial";
+    UpdateProfile(repo, history).execute(id, update);
+    EXPECT_TRUE(history.entries.empty());
 }
