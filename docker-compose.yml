@@ -1,3 +1,7 @@
+# Fixed project name: without it Compose names the project after the folder,
+# so renaming the folder ("Fit App" -> "Kinetiq") orphaned the old container.
+name: kinetiq
+
 services:
   postgres:
     image: postgres:16
@@ -21,3 +25,5 @@ services:
 
 volumes:
   kinetiq_pgdata:
+    # Fixed name so the data volume no longer depends on the folder name either.
+    name: kinetiq_pgdata

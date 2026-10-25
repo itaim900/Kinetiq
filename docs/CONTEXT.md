@@ -94,10 +94,11 @@ short viewports) via Playwright's actionability checks.
 - **Git hooks** in `.githooks/` (enable: `git config core.hooksPath .githooks`): pre-commit checks the
   changed half, pre-push runs everything and blocks if DB tests skipped. Spec:
   `docs/superpowers/specs/2026-10-21-git-hooks-design.md`.
-- **Repo folder was renamed `Fit App` → `Kinetiq`.** Compose derives the project name from the
-  folder, so the existing Postgres container/volume belong to project `fitapp`
-  (`fitapp_kinetiq_pgdata`) and `docker compose up -d` now clashes on the container name. Until
-  that's fixed, start Postgres with **`docker start kinetiq-postgres`**.
+- **Compose project is named `kinetiq`** (fixed `name:` in `docker-compose.yml`, so it no longer
+  depends on the folder name — the folder was renamed `Fit App` → `Kinetiq`). Data volume
+  **`kinetiq_pgdata`** (copied 2026-10-25 from the old `fitapp_kinetiq_pgdata`, verified identical).
+  `docker compose up -d` works again. Old volumes `fitapp_kinetiq_pgdata`, `fitapp_fitapp_pgdata`,
+  `kinetiq_kinetiq_pgdata` are kept as a backup (backlog: delete once confident).
 - Docker Desktop's built-in **Kubernetes was turned off** (2026-10-21) to save RAM; settings backup
   at `%APPDATA%\Docker\settings-store.json.bak-2026-10-21`.
 - **GitHub CLI (`gh`)** installed at `C:\Program Files\GitHub CLI\gh.exe` (v2.95.0), logged in as
