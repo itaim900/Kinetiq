@@ -10,6 +10,19 @@ For durable/architectural facts, also update `docs/CONTEXT.md` (and add an ADR w
 
 ---
 
+## 2026-10-25 — VS Code
+- **Stage C finished:** injuries list/cards/healed/delete, injury form (condition search, locked
+  catalog muscles, unlisted path), profile form — all TDD (client 94/94).
+- **Owner's additions, designed + built (12 tasks):** repo → `itaim900/Kinetiq`; Compose fixed
+  (fixed names, data copied, old volumes kept); npm audit → 0 prod advisories (zod 4.6.7); ADRs
+  0013–0017; light/night themes (white/near-black accent); Metric | Imperial switch (account);
+  JSON Merge Patch clearing + `user_profile_history` (migration 0006; server 184/184).
+- **Browser check** (Playwright, real stack) passed; **found + fixed a bug** (units switch after save
+  lost new values). Fixed a flaky test (async timeout 3 s) and an OOM build (`-j 2`, hooks capped).
+- **`docs/backlog.md`** created: forgot password, subscription idea ($5.99, refund after 10 verified
+  workouts), user-agreement disclosure, delete-my-data, toolchain upgrade, favicon, …
+- Next: merge `slice-2-profile` → `main` (owner's go-ahead), then Slice 3 (exercise catalog).
+
 ## 2026-10-22 — VS Code
 - **Pushed** the injury conditions catalog (pre-push full check green) and demoed it live through
   the Vite proxy (rotator cuff strain + an unlisted wrist injury).

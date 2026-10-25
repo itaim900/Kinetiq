@@ -172,7 +172,7 @@ endpoint → UI), **auth first** (every other endpoint is 🔒).
   `docs/02-api-contract.md`. **Explicitly deferred to future slices:** Google OAuth,
   forgot-password reset (Client has a visual-only placeholder), account deletion, login
   rate-limiting, email verification.
-- **Slice 2 — Profile & Injuries: IN PROGRESS (started 2026-07-25, branch `slice-2-profile`).**
+- **Slice 2 — Profile & Injuries: COMPLETE (2026-10-25, branch `slice-2-profile`; merge to `main` pending owner's go-ahead).**
   Design brainstormed (8 locked decisions, see spec) + Stage A TDD plan written.
   **Stage A (#19 `GET`/`PATCH /users/me`) ✅ DONE:** grew `domain::User` + `domain::ProfilePolicy`
   validator, `PgUserRepository` maps/persists all profile columns (no migration — Slice 0 built
@@ -226,6 +226,9 @@ port/fake → green → refactor.
 - `superpowers/specs/2026-10-21-injury-conditions-catalog-design.md` — multi-muscle injuries + conditions catalog (C1–C9, ICD-11 sources)
 - `superpowers/plans/2026-10-21-injury-conditions-catalog.md` — its 6-task TDD plan (done)
 - `superpowers/specs/2026-10-21-git-hooks-design.md` + `plans/2026-10-21-git-hooks.md` — local git hooks
+- `backlog.md` — every deferred "later, not never" item in one list (incl. owner's product ideas)
+- `superpowers/specs/2026-10-22-stage-c-frontend-design.md` + `plans/2026-10-22-stage-c-frontend.md` — Stage C UI
+- `superpowers/specs/2026-10-25-themes-units-clearing-design.md` + `plans/2026-10-25-themes-units-clearing.md` — themes, units, clearing, ops
 - `adr/` — decision records (note: 0003 & 0005 superseded by 0011 & 0012)
 - `learning/` — git-ignored personal notes: `code-walkthrough.md`, `how-to-run.md`,
   `session-log-phase1-spike.md`
@@ -245,7 +248,7 @@ See `docs/learning/how-to-run.md`. Two ways:
 **Ports:** 5173 (Vite dev), 8080 (backend), 5432 (Postgres dev), 3000 (containerized app UI).
 
 ## Next steps
-**Phase 2, Slice 2 — Profile & Injuries: IN PROGRESS** on branch `slice-2-profile`. Full narrative
+**Phase 2, Slice 2 — Profile & Injuries: COMPLETE** (branch `slice-2-profile`, merge to `main` pending). Full narrative
 in `docs/phase-2-slice-2-profile-injuries.md`; design in the spec (8 locked decisions).
 
 - **Stage A — #19 `GET`/`PATCH /users/me`: ✅ DONE** (2026-07-25). `ctest` 94/94, live-verified.
@@ -261,19 +264,13 @@ in `docs/phase-2-slice-2-profile-injuries.md`; design in the spec (8 locked deci
   0 skipped**; live-verified. Spec `superpowers/specs/2026-10-21-injury-conditions-catalog-design.md`
   (supersedes July E2/E4/E5), plan `superpowers/plans/2026-10-21-injury-conditions-catalog.md`.
   Secondary-muscle mappings are project judgement, pending physio review.
-- **Stage C — #25 Frontend: Tasks 1–8 of 9 done + additions (2026-10-25).** Spec
-  `superpowers/specs/2026-10-22-stage-c-frontend-design.md`, plan `…/plans/2026-10-22-stage-c-frontend.md`.
-  Built: rename **Kinetiq**; `authFetch`/`ApiError`/401 logout; typed API + stateful MSW; `AppShell`
-  with Injuries/Profile tabs (react-router 7); injuries list/cards/healed/delete-confirm; injury form
-  (searchable condition, locked catalog muscles, unlisted path, muscle chips); profile form.
-  **Additions** (spec `…/specs/2026-10-25-themes-units-clearing-design.md`, plan
-  `…/plans/2026-10-25-themes-units-clearing.md`, all 12 tasks done): repo renamed `itaim900/Kinetiq`;
-  Compose fixed; `npm audit` → 0 production advisories (**zod upgraded to 4.6.7**); ADRs 0013–0017;
-  light/night themes (monochrome accent, toggle); app-wide **Metric | Imperial** switch (server stays
-  metric); `PATCH /users/me` = JSON Merge Patch (`null` clears) + `user_profile_history`
-  (migration 0006). Client 93/93, server 184/184.
-  **Next: Stage C Task 9** — browser check of everything (incl. themes/units/clearing), slice build
-  log, `docs/backlog.md`, then merge `slice-2-profile` → `main` (owner's go-ahead).
+- **Stage C — #25 Frontend: ✅ DONE (2026-10-25).** Injuries + Profile tabs (react-router 7, React
+  Hook Form + zod 4.6.7), light/night themes, Metric | Imperial switch, clearing values with profile
+  history (migration 0006), repo renamed `itaim900/Kinetiq`, Compose fixed, ADRs 0013–0017.
+  **Browser-verified** with Playwright on the real stack (found + fixed one bug: units switch after
+  save lost the new values). Client 94/94, server 184/184. Build log in
+  `docs/phase-2-slice-2-profile-injuries.md`; deferred items in **`docs/backlog.md`**.
+  **Next:** merge `slice-2-profile` → `main`, then **Slice 3 — Exercises + seed (#21, #22, #26)**.
 
 **Carry-overs worth remembering:**
 - Reuse the `AutoCommitPgUserRepository` pattern (connection-per-call, not one shared long-lived

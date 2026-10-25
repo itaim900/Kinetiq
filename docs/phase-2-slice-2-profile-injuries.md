@@ -218,10 +218,45 @@ unknown wrist injury → 201 with `condition: null`, `muscles: []`; `left_knee` 
 
 ---
 
+### Stage C — Frontend (`#25`) (2026-10-22 → 2026-10-25)
+
+Designed with browser mockups (spec `2026-10-22-stage-c-frontend-design.md`, S1–S8): top bar with
+Injuries/Profile tabs, one searchable condition field ("My injury isn't listed…" → region/type/
+muscles), inline add/edit forms, not-medical-advice notice. React Router 7 + React Hook Form + Zod
++ plain `fetch` (no TanStack Query).
+
+Built in 8 TDD tasks: rename **KinetiQ → Kinetiq** · `authFetch`/`ApiError`/401 logout + typed API +
+stateful MSW · `AppShell` + routing · injuries list (cards, healed section, delete confirm) · pure
+`injurySchema.ts` (Zod rules + add/update request converters) · `InjuryForm` (`ConditionSearch`,
+locked catalog muscles, `MuscleSelect`) · add/edit on the page · profile form.
+
+**Additions** (spec `2026-10-25-themes-units-clearing-design.md`, 12 tasks): repo renamed
+`itaim900/Kinetiq`; Compose fixed (fixed project/volume names, data copied + verified); `npm audit`
+→ 0 production advisories (**zod 3 → 4.6.7**); ADRs 0013–0017; light/night themes with a
+monochrome accent (CSS tokens + `data-theme`, no-flash inline script); app-wide **Metric |
+Imperial** switch saved to the account (server stays metric); `PATCH /users/me` = **JSON Merge
+Patch** (`null` clears) + **`user_profile_history`** (migration 0006). Lessons: a flaky App test
+under parallel load (async timeout raised to 3 s); the compiler ran out of memory on a wide rebuild
+(hooks/CLAUDE.md now use `-j 2`).
+
+**Browser verification (Playwright, real server + Postgres, 2026-10-25):** login screen light →
+night; register → `/injuries`; ACL tear (ICD-11 NC93.62, 3 locked secondary muscles) added; unlisted
+wrist injury with Forearm Flexors added; ACL edited (severity + notes); wrist marked healed →
+"Healed (1)" → deleted after confirmation; profile saved (180 cm / 75 kg / intermediate); Imperial →
+70.9 in "= 5 ft 11 in" / 165.3 lb; reload keeps Imperial (account) and night (browser); back to
+Metric → exactly 180/75; weight cleared → "Kinetiq will keep using your last saved weight (75 kg)…",
+DB: `weight_kg` NULL + history rows incl. `75 → (null)`; light mode in-app (primary pill filled,
+secondary outlined); back button `/injuries` → `/profile`. Only console error: missing `favicon.ico`.
+**Bug found + fixed:** after saving, switching units rebuilt the profile form from the profile
+loaded at page open, so just-saved values vanished — `ProfilePage` now updates its copy after each
+save (regression test added). Test user deleted (history cascaded).
+
+**Result:** client 94/94, server 184/184 (0 skipped). Slice 2 complete; merge to `main` pending the
+owner's go-ahead.
+
+---
+
 ## What's next
 
-**Stage C (`#25` frontend):** profile + injuries forms (first React Hook Form + Zod in this
-codebase). The injury form: pick a known condition from `GET /injury-conditions` (shows its
-muscles, read-only) **or** "other" → region dropdown + type + muscle picker from `GET /muscles`.
-Must show a "general information, not medical advice" notice wherever conditions appear. Then
-merge `slice-2-profile` → `main`.
+**Merge `slice-2-profile` → `main`** (owner's go-ahead), then **Slice 3 — Exercise catalog + seed**
+(`#21`, `#22`, `#26`). Deferred items live in `docs/backlog.md`.
