@@ -72,3 +72,30 @@ TEST(UpdateProfile, UnknownUser_ThrowsProfileUserNotFound) {
     update.weightKg = 70.0;
     EXPECT_THROW(useCase.execute(999999, update), ProfileUserNotFoundError);
 }
+
+TEST(UpdateProfile, ClearField_EmptiesIt) {
+    InMemoryUserRepository repo;
+    const long long id = seedUser(repo);  // experience_level = "beginner"
+
+    ProfileUpdate update;
+    update.clear.insert("experience_level");
+    UpdateProfile useCase(repo);
+    const User result = useCase.execute(id, update);
+
+    EXPECT_FALSE(result.experienceLevel.has_value());
+    EXPECT_FALSE(repo.findById(id)->experienceLevel.has_value());  // persisted
+}
+
+TEST(UpdateProfile, ClearUnitPreference_Throws_OnThatField) {
+    InMemoryUserRepository repo;
+    const long long id = seedUser(repo);
+    ProfileUpdate update;
+    update.clear.insert("unit_preference");
+    UpdateProfile useCase(repo);
+    try {
+        useCase.execute(id, update);
+        FAIL() << "expected ProfileValidationError";
+    } catch (const ProfileValidationError& e) {
+        EXPECT_EQ(e.field(), "unit_preference");
+    }
+}

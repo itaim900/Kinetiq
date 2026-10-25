@@ -5,6 +5,7 @@
 #include "ports/IUserRepository.h"
 
 #include <optional>
+#include <set>
 #include <stdexcept>
 #include <string>
 
@@ -19,8 +20,9 @@ public:
     ProfileUserNotFoundError() : std::runtime_error("authenticated user not found") {}
 };
 
-// A partial profile update: each present field is applied, each absent field is
-// left unchanged (D3 -- no null-clearing in v1).
+// A partial profile update, following JSON Merge Patch (RFC 7396, ADR-0017):
+// absent = unchanged, a value = set it, null = clear it (listed in `clear`).
+// Supersedes Slice 2's D3 ("no null-clearing in v1").
 struct ProfileUpdate {
     std::optional<std::string> sex;
     std::optional<std::string> birthDate;
@@ -31,6 +33,8 @@ struct ProfileUpdate {
     std::optional<int> weeklyWorkoutGoal;
     std::optional<int> availableTimeMinutes;
     std::optional<std::string> medications;
+    // Wire names of fields sent as JSON null -> clear them.
+    std::set<std::string> clear;
 };
 
 // Use case: load the current user, apply the provided fields, validate the
@@ -46,6 +50,18 @@ public:
         }
 
         kinetiq::domain::User user = *found;
+        if (update.clear.count("unit_preference")) {
+            throw kinetiq::domain::ProfileValidationError(
+                "unit_preference", "unit_preference can't be cleared (it must be metric or imperial)");
+        }
+        if (update.clear.count("sex")) user.sex.reset();
+        if (update.clear.count("birth_date")) user.birthDate.reset();
+        if (update.clear.count("height_cm")) user.heightCm.reset();
+        if (update.clear.count("weight_kg")) user.weightKg.reset();
+        if (update.clear.count("experience_level")) user.experienceLevel.reset();
+        if (update.clear.count("weekly_workout_goal")) user.weeklyWorkoutGoal.reset();
+        if (update.clear.count("available_time_minutes")) user.availableTimeMinutes.reset();
+        if (update.clear.count("medications")) user.medications.reset();
         if (update.sex) user.sex = update.sex;
         if (update.birthDate) user.birthDate = update.birthDate;
         if (update.heightCm) user.heightCm = update.heightCm;

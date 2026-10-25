@@ -114,3 +114,28 @@ TEST(UserControllerTest, PatchMe_MissingToken_Returns401) {
     const auto r = client.send(crow::HTTPMethod::Patch, "/api/v1/users/me", R"({"weight_kg":70})");
     EXPECT_EQ(r.code, 401);
 }
+
+TEST(UserControllerTest, PatchMe_NullClearsField_Returns200WithNull) {
+    UserApi api;
+    kinetiq::testing::HttpClient client(api.app);
+    const std::string token = registerAndGetToken(client, "clear@example.com");
+    client.send(crow::HTTPMethod::Patch, "/api/v1/users/me", R"({"weight_kg":80})",
+                {{"Authorization", "Bearer " + token}});
+
+    const auto r = client.send(crow::HTTPMethod::Patch, "/api/v1/users/me", R"({"weight_kg":null})",
+                               {{"Authorization", "Bearer " + token}});
+    EXPECT_EQ(r.code, 200);
+    const auto body = crow::json::load(r.body);
+    ASSERT_TRUE(body);
+    EXPECT_EQ(body["weight_kg"].t(), crow::json::type::Null);
+}
+
+TEST(UserControllerTest, PatchMe_NullUnitPreference_Returns422) {
+    UserApi api;
+    kinetiq::testing::HttpClient client(api.app);
+    const std::string token = registerAndGetToken(client, "clear-unit@example.com");
+    const auto r = client.send(crow::HTTPMethod::Patch, "/api/v1/users/me",
+                               R"({"unit_preference":null})", {{"Authorization", "Bearer " + token}});
+    EXPECT_EQ(r.code, 422);
+    EXPECT_TRUE(crow::json::load(r.body)["errors"].has("unit_preference"));
+}

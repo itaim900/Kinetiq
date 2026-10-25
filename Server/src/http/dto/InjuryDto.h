@@ -46,7 +46,11 @@ inline kinetiq::app::UpdateInjuryFields parseUpdateInjury(const crow::json::rval
     if (body.has("severity")) fields.severity = std::string(body["severity"].s());
     if (body.has("injury_type")) fields.injuryType = std::string(body["injury_type"].s());
     if (body.has("muscle_ids")) fields.muscleIds = parseIdList(body["muscle_ids"]);
-    if (body.has("notes")) fields.notes = std::string(body["notes"].s());
+    if (body.has("notes")) {
+        // JSON null (or "") clears the notes.
+        fields.notes = body["notes"].t() == crow::json::type::Null ? std::string()
+                                                                    : std::string(body["notes"].s());
+    }
     if (body.has("active")) fields.active = body["active"].b();
     return fields;
 }

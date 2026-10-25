@@ -10,21 +10,31 @@
 
 namespace kinetiq::http::dto {
 
-// Parses a PATCH /users/me body into a ProfileUpdate. Only keys actually
-// present are set -- an absent key leaves that field unchanged (D3).
+// Parses a PATCH /users/me body into a ProfileUpdate, JSON Merge Patch style:
+// an absent key leaves the field unchanged, a value sets it, and null clears
+// it (goes into `clear`; ADR-0017).
 inline kinetiq::app::ProfileUpdate parseProfileUpdate(const crow::json::rvalue& body) {
     kinetiq::app::ProfileUpdate u;
-    if (body.has("sex")) u.sex = std::string(body["sex"].s());
-    if (body.has("birth_date")) u.birthDate = std::string(body["birth_date"].s());
-    if (body.has("height_cm")) u.heightCm = body["height_cm"].d();
-    if (body.has("weight_kg")) u.weightKg = body["weight_kg"].d();
-    if (body.has("experience_level")) u.experienceLevel = std::string(body["experience_level"].s());
-    if (body.has("unit_preference")) u.unitPreference = std::string(body["unit_preference"].s());
-    if (body.has("weekly_workout_goal"))
+    const auto isNull = [&body](const char* key) {
+        return body.has(key) && body[key].t() == crow::json::type::Null;
+    };
+    for (const char* key : {"sex", "birth_date", "height_cm", "weight_kg", "experience_level",
+                            "unit_preference", "weekly_workout_goal", "available_time_minutes",
+                            "medications"}) {
+        if (isNull(key)) u.clear.insert(key);
+    }
+    const auto present = [&](const char* key) { return body.has(key) && !isNull(key); };
+    if (present("sex")) u.sex = std::string(body["sex"].s());
+    if (present("birth_date")) u.birthDate = std::string(body["birth_date"].s());
+    if (present("height_cm")) u.heightCm = body["height_cm"].d();
+    if (present("weight_kg")) u.weightKg = body["weight_kg"].d();
+    if (present("experience_level")) u.experienceLevel = std::string(body["experience_level"].s());
+    if (present("unit_preference")) u.unitPreference = std::string(body["unit_preference"].s());
+    if (present("weekly_workout_goal"))
         u.weeklyWorkoutGoal = static_cast<int>(body["weekly_workout_goal"].i());
-    if (body.has("available_time_minutes"))
+    if (present("available_time_minutes"))
         u.availableTimeMinutes = static_cast<int>(body["available_time_minutes"].i());
-    if (body.has("medications")) u.medications = std::string(body["medications"].s());
+    if (present("medications")) u.medications = std::string(body["medications"].s());
     return u;
 }
 

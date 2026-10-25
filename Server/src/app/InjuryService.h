@@ -111,7 +111,10 @@ public:
             if (fields.muscleIds) injury.muscles = resolveMuscles(*fields.muscleIds);
         }
         if (fields.severity) injury.severity = *fields.severity;
-        if (fields.notes) injury.notes = fields.notes;
+        // Empty (or JSON null) notes clear them.
+        if (fields.notes) {
+            injury.notes = fields.notes->empty() ? std::nullopt : fields.notes;
+        }
         if (fields.active) injury.active = *fields.active;
 
         kinetiq::domain::requireValidInjury(injury);

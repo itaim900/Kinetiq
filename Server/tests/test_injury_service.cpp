@@ -244,3 +244,13 @@ TEST(InjuryService, Remove_OtherUsersInjury_ThrowsNotFound) {
     EXPECT_THROW(f.svc.remove(2, created.id), InjuryNotFoundError);
     EXPECT_EQ(f.svc.list(1).size(), 1u);
 }
+
+TEST(InjuryService, Update_EmptyNotes_ClearsThem) {
+    Fixture f;
+    auto req = unknownReq(1, "lower_back", "mild");
+    req.notes = "old";
+    const Injury created = f.svc.add(req);
+    UpdateInjuryFields fields;
+    fields.notes = "";
+    EXPECT_FALSE(f.svc.update(1, created.id, fields).notes.has_value());
+}

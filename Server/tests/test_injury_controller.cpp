@@ -277,3 +277,20 @@ TEST(InjuryControllerTest, Patch_Unknown_MuscleIdsEmpty_ClearsMuscles) {
     EXPECT_EQ(r.code, 200);
     EXPECT_EQ(crow::json::load(r.body)["muscles"].size(), 0u);
 }
+
+TEST(InjuryControllerTest, Patch_NotesNull_ClearsNotes) {
+    InjuryApi api;
+    kinetiq::testing::HttpClient client(api.app);
+    const std::string token = registerAndGetToken(client, "inj-notes@example.com");
+    const auto created = crow::json::load(
+        client
+            .post("/api/v1/users/me/injuries",
+                  R"({"body_region":"lower_back","severity":"mild","injury_type":"other","notes":"old"})",
+                  {{"Authorization", "Bearer " + token}})
+            .body);
+    const auto r = client.send(crow::HTTPMethod::Patch,
+                               "/api/v1/users/me/injuries/" + std::to_string(created["id"].i()),
+                               R"({"notes":null})", {{"Authorization", "Bearer " + token}});
+    EXPECT_EQ(r.code, 200);
+    EXPECT_EQ(crow::json::load(r.body)["notes"].t(), crow::json::type::Null);
+}
