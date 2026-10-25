@@ -2,9 +2,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { ApiError, type Profile, type ProfileUpdate } from '../../api';
+import { formatFeetInches, inToCm, type Units } from '../../lib/units';
 import {
+  SERVER_FIELD_TO_FORM,
+  makeProfileSchema,
   profileDefaults,
-  profileFormSchema,
   toProfileUpdate,
   type ProfileField,
   type ProfileFormValues,
@@ -12,10 +14,11 @@ import {
 
 interface ProfileFormProps {
   profile: Profile;
+  units: Units;
   onSave: (update: ProfileUpdate) => Promise<Profile>;
 }
 
-export default function ProfileForm({ profile, onSave }: ProfileFormProps) {
+export default function ProfileForm({ profile, units, onSave }: ProfileFormProps) {
   const [saved, setSaved] = useState(profile);
   const [status, setStatus] = useState<string | null>(null);
   const {
@@ -23,17 +26,18 @@ export default function ProfileForm({ profile, onSave }: ProfileFormProps) {
     handleSubmit,
     reset,
     setError,
+    watch,
     formState: { errors, dirtyFields, isSubmitting },
   } = useForm<ProfileFormValues>({
-    resolver: zodResolver(profileFormSchema),
-    defaultValues: profileDefaults(profile),
+    resolver: zodResolver(makeProfileSchema(units)),
+    defaultValues: profileDefaults(profile, units),
   });
 
   async function submit(values: ProfileFormValues) {
     setStatus(null);
     // dirtyFields = what the user actually changed since the last save.
     const changed = (Object.keys(dirtyFields) as ProfileField[]).filter((f) => dirtyFields[f]);
-    const { update, cleared } = toProfileUpdate(values, changed, saved);
+    const { update, cleared } = toProfileUpdate(values, changed, saved, units);
     if (cleared.length > 0) {
       for (const field of cleared) {
         setError(field, { message: "Clearing a saved value isn't supported yet." });
@@ -47,12 +51,12 @@ export default function ProfileForm({ profile, onSave }: ProfileFormProps) {
     try {
       const updated = await onSave(update);
       setSaved(updated);
-      reset(profileDefaults(updated)); // new baseline: nothing is "changed" any more
+      reset(profileDefaults(updated, units)); // new baseline: nothing is "changed" any more
       setStatus('Profile saved.');
     } catch (err) {
       if (err instanceof ApiError && Object.keys(err.fieldErrors).length > 0) {
         for (const [field, messages] of Object.entries(err.fieldErrors)) {
-          setError(field as ProfileField, { message: messages[0] });
+          setError(SERVER_FIELD_TO_FORM[field] ?? (field as ProfileField), { message: messages[0] });
         }
       } else {
         setStatus(err instanceof Error ? err.message : String(err));
@@ -66,17 +70,21 @@ export default function ProfileForm({ profile, onSave }: ProfileFormProps) {
         {errors[field]?.message}
       </p>
     ) : null;
+  const heightIn = Number(watch('height'));
 
   return (
     <form className="profile-form" aria-label="Profile" onSubmit={handleSubmit(submit)} noValidate>
       <fieldset>
         <legend>Body</legend>
-        <label htmlFor="height_cm">Height (cm)</label>
-        <input id="height_cm" inputMode="decimal" {...register('height_cm')} />
-        {err('height_cm')}
-        <label htmlFor="weight_kg">Weight (kg)</label>
-        <input id="weight_kg" inputMode="decimal" {...register('weight_kg')} />
-        {err('weight_kg')}
+        <label htmlFor="height">Height ({units === 'imperial' ? 'in' : 'cm'})</label>
+        <input id="height" inputMode="decimal" {...register('height')} />
+        {units === 'imperial' && heightIn > 0 && (
+          <p className="muted">= {formatFeetInches(inToCm(heightIn))}</p>
+        )}
+        {err('height')}
+        <label htmlFor="weight">Weight ({units === 'imperial' ? 'lb' : 'kg'})</label>
+        <input id="weight" inputMode="decimal" {...register('weight')} />
+        {err('weight')}
         <label htmlFor="birth_date">Birth date</label>
         <input id="birth_date" type="date" {...register('birth_date')} />
         {err('birth_date')}
@@ -114,12 +122,6 @@ export default function ProfileForm({ profile, onSave }: ProfileFormProps) {
         <label htmlFor="medications">Medications</label>
         <textarea id="medications" rows={2} {...register('medications')} />
         {err('medications')}
-        <label htmlFor="unit_preference">Units</label>
-        <select id="unit_preference" {...register('unit_preference')}>
-          <option value="metric">Metric</option>
-          <option value="imperial">Imperial (display coming later)</option>
-        </select>
-        {err('unit_preference')}
       </fieldset>
 
       {status && (

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { Profile, ProfileUpdate } from '../../api';
+import { cmToIn, inToCm, kgToLb, lbToKg, round1, type Units } from '../../lib/units';
 
 // A real calendar date in YYYY-MM-DD (rejects 2001-02-29), like the server.
 export function isValidDate(s: string): boolean {
@@ -8,72 +9,116 @@ export function isValidDate(s: string): boolean {
   return !Number.isNaN(d.getTime()) && d.toISOString().startsWith(s);
 }
 
+const HEIGHT_MAX_CM = 300;
+const WEIGHT_MAX_KG = 500;
+
 // Empty means "not set"; otherwise the number must pass `ok`.
 const blankOr = (ok: (n: number) => boolean) => (s: string) => s.trim() === '' || ok(Number(s));
 
-// Mirrors the server's ProfilePolicy so users get the same answer instantly.
-export const profileFormSchema = z.object({
-  height_cm: z
-    .string()
-    .refine(blankOr((n) => n > 0 && n <= 300), 'Height must be more than 0 and at most 300 cm'),
-  weight_kg: z
-    .string()
-    .refine(blankOr((n) => n > 0 && n <= 500), 'Weight must be more than 0 and at most 500 kg'),
-  birth_date: z.string().refine((s) => s === '' || isValidDate(s), 'Enter a real date (YYYY-MM-DD)'),
-  sex: z.string(),
-  experience_level: z.string(),
-  weekly_workout_goal: z
-    .string()
-    .refine(blankOr((n) => Number.isInteger(n) && n >= 0), 'Use a whole number, 0 or more'),
-  available_time_minutes: z
-    .string()
-    .refine(blankOr((n) => Number.isInteger(n) && n > 0), 'Use a whole number above 0'),
-  medications: z.string(),
-  unit_preference: z.enum(['metric', 'imperial']),
-});
+// What the server will store for a typed height/weight: metric, rounded.
+export const heightToCm = (value: number, units: Units) =>
+  round1(units === 'imperial' ? inToCm(value) : value);
+export const weightToKg = (value: number, units: Units) =>
+  round1(units === 'imperial' ? lbToKg(value) : value);
 
-export type ProfileFormValues = z.infer<typeof profileFormSchema>;
+// Same limits as the server's ProfilePolicy, checked in metric, worded in the
+// user's units.
+export function makeProfileSchema(units: Units) {
+  const heightMax =
+    units === 'imperial' ? `${round1(cmToIn(HEIGHT_MAX_CM))} in` : `${HEIGHT_MAX_CM} cm`;
+  const weightMax =
+    units === 'imperial' ? `${round1(kgToLb(WEIGHT_MAX_KG))} lb` : `${WEIGHT_MAX_KG} kg`;
+  return z.object({
+    height: z
+      .string()
+      .refine(
+        blankOr((n) => heightToCm(n, units) > 0 && heightToCm(n, units) <= HEIGHT_MAX_CM),
+        `Height must be more than 0 and at most ${heightMax}`,
+      ),
+    weight: z
+      .string()
+      .refine(
+        blankOr((n) => weightToKg(n, units) > 0 && weightToKg(n, units) <= WEIGHT_MAX_KG),
+        `Weight must be more than 0 and at most ${weightMax}`,
+      ),
+    birth_date: z
+      .string()
+      .refine((s) => s === '' || isValidDate(s), 'Enter a real date (YYYY-MM-DD)'),
+    sex: z.string(),
+    experience_level: z.string(),
+    weekly_workout_goal: z
+      .string()
+      .refine(blankOr((n) => Number.isInteger(n) && n >= 0), 'Use a whole number, 0 or more'),
+    available_time_minutes: z
+      .string()
+      .refine(blankOr((n) => Number.isInteger(n) && n > 0), 'Use a whole number above 0'),
+    medications: z.string(),
+  });
+}
+
+export type ProfileFormValues = z.infer<ReturnType<typeof makeProfileSchema>>;
 export type ProfileField = keyof ProfileFormValues;
 
-const NUMBER_FIELDS: ProfileField[] = [
-  'height_cm',
-  'weight_kg',
-  'weekly_workout_goal',
-  'available_time_minutes',
-];
+// Form field -> server field (height/weight are unit-neutral in the form).
+const SERVER_NAME: Record<ProfileField, keyof ProfileUpdate> = {
+  height: 'height_cm',
+  weight: 'weight_kg',
+  birth_date: 'birth_date',
+  sex: 'sex',
+  experience_level: 'experience_level',
+  weekly_workout_goal: 'weekly_workout_goal',
+  available_time_minutes: 'available_time_minutes',
+  medications: 'medications',
+};
 
-export function profileDefaults(p: Profile): ProfileFormValues {
+// Server field -> form field, so a 422 lands under the right input.
+export const SERVER_FIELD_TO_FORM: Record<string, ProfileField> = Object.fromEntries(
+  Object.entries(SERVER_NAME).map(([form, server]) => [server, form]),
+) as Record<string, ProfileField>;
+
+const INTEGER_FIELDS: ProfileField[] = ['weekly_workout_goal', 'available_time_minutes'];
+
+export function profileDefaults(p: Profile, units: Units): ProfileFormValues {
   const s = (v: string | number | null) => (v === null ? '' : String(v));
   return {
-    height_cm: s(p.height_cm),
-    weight_kg: s(p.weight_kg),
+    height:
+      p.height_cm === null
+        ? ''
+        : String(units === 'imperial' ? round1(cmToIn(p.height_cm)) : p.height_cm),
+    weight:
+      p.weight_kg === null
+        ? ''
+        : String(units === 'imperial' ? round1(kgToLb(p.weight_kg)) : p.weight_kg),
     birth_date: s(p.birth_date),
     sex: s(p.sex),
     experience_level: s(p.experience_level),
     weekly_workout_goal: s(p.weekly_workout_goal),
     available_time_minutes: s(p.available_time_minutes),
     medications: s(p.medications),
-    unit_preference: p.unit_preference,
   };
 }
 
-// Turns the changed fields into a PATCH body. The server can't clear a saved
-// value yet (absent = unchanged), so emptied saved values are reported back
-// in `cleared` instead of being silently dropped.
+// Turns the fields the user changed into a PATCH body (always metric).
+// Emptied saved values are reported in `cleared`.
 export function toProfileUpdate(
   values: ProfileFormValues,
   changed: ProfileField[],
   saved: Profile,
+  units: Units,
 ): { update: ProfileUpdate; cleared: ProfileField[] } {
-  const update: Record<string, string | number> = {};
+  const update: Record<string, string | number | null> = {};
   const cleared: ProfileField[] = [];
   for (const field of changed) {
     const raw = values[field].trim();
+    const serverField = SERVER_NAME[field];
     if (raw === '') {
-      if (saved[field] !== null) cleared.push(field);
+      if (saved[serverField as keyof Profile] !== null) cleared.push(field);
       continue;
     }
-    update[field] = NUMBER_FIELDS.includes(field) ? Number(raw) : raw;
+    if (field === 'height') update[serverField] = heightToCm(Number(raw), units);
+    else if (field === 'weight') update[serverField] = weightToKg(Number(raw), units);
+    else if (INTEGER_FIELDS.includes(field)) update[serverField] = Number(raw);
+    else update[serverField] = raw;
   }
   return { update: update as ProfileUpdate, cleared };
 }

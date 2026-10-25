@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Profile } from '../../api';
-import { isValidDate, profileDefaults, profileFormSchema, toProfileUpdate } from './profileSchema';
+import { isValidDate, makeProfileSchema, profileDefaults, toProfileUpdate } from './profileSchema';
 
 const saved: Profile = {
   id: 1,
@@ -17,27 +17,40 @@ const saved: Profile = {
   medications: null,
 };
 
-const errorPaths = (overrides: Record<string, string>) => {
-  const r = profileFormSchema.safeParse({ ...profileDefaults(saved), ...overrides });
+const errorPaths = (units: 'metric' | 'imperial', overrides: Record<string, string>) => {
+  const r = makeProfileSchema(units).safeParse({ ...profileDefaults(saved, units), ...overrides });
   return r.success ? [] : r.error.issues.map((i) => i.path.join('.'));
 };
 
-describe('profileFormSchema (mirrors ProfilePolicy)', () => {
-  it('accepts the saved profile', () => expect(errorPaths({})).toEqual([]));
+describe('makeProfileSchema (mirrors ProfilePolicy)', () => {
+  it('accepts the saved profile in both unit systems', () => {
+    expect(errorPaths('metric', {})).toEqual([]);
+    expect(errorPaths('imperial', {})).toEqual([]);
+  });
 
-  it('checks height and weight ranges', () => {
-    expect(errorPaths({ height_cm: '0' })).toEqual(['height_cm']);
-    expect(errorPaths({ height_cm: '301' })).toEqual(['height_cm']);
-    expect(errorPaths({ weight_kg: '500.5' })).toEqual(['weight_kg']);
-    expect(errorPaths({ weight_kg: 'abc' })).toEqual(['weight_kg']);
+  it('checks limits in metric', () => {
+    expect(errorPaths('metric', { height: '0' })).toEqual(['height']);
+    expect(errorPaths('metric', { height: '301' })).toEqual(['height']);
+    expect(errorPaths('metric', { weight: '500.5' })).toEqual(['weight']);
+    expect(errorPaths('metric', { weight: 'abc' })).toEqual(['weight']);
+  });
+
+  it('checks the same limits in imperial', () => {
+    expect(errorPaths('imperial', { height: '118.1' })).toEqual([]); // ≈ 300 cm
+    expect(errorPaths('imperial', { height: '118.3' })).toEqual(['height']);
+    expect(errorPaths('imperial', { weight: '1102.3' })).toEqual([]); // ≈ 500 kg
+    expect(errorPaths('imperial', { weight: '1103' })).toEqual(['weight']);
+  });
+
+  it('words imperial limits in imperial units', () => {
+    const r = makeProfileSchema('imperial').safeParse({ ...profileDefaults(saved, 'imperial'), height: '200' });
+    expect(r.success ? '' : r.error.issues[0].message).toMatch(/118\.1 in/);
   });
 
   it('needs whole numbers for workouts and minutes', () => {
-    expect(errorPaths({ weekly_workout_goal: '2.5' })).toEqual(['weekly_workout_goal']);
-    expect(errorPaths({ available_time_minutes: '0' })).toEqual(['available_time_minutes']);
+    expect(errorPaths('metric', { weekly_workout_goal: '2.5' })).toEqual(['weekly_workout_goal']);
+    expect(errorPaths('metric', { available_time_minutes: '0' })).toEqual(['available_time_minutes']);
   });
-
-  it('allows empty optional fields', () => expect(errorPaths({ available_time_minutes: '' })).toEqual([]));
 });
 
 describe('isValidDate', () => {
@@ -48,17 +61,29 @@ describe('isValidDate', () => {
   });
 });
 
+describe('profileDefaults', () => {
+  it('shows saved values in the chosen units', () => {
+    expect(profileDefaults(saved, 'metric')).toMatchObject({ height: '178', weight: '74' });
+    expect(profileDefaults(saved, 'imperial')).toMatchObject({ height: '70.1', weight: '163.1' });
+  });
+});
+
 describe('toProfileUpdate', () => {
-  it('sends only changed fields, with numbers as numbers', () => {
-    const values = { ...profileDefaults(saved), weight_kg: '80', medications: 'none' };
-    expect(toProfileUpdate(values, ['weight_kg', 'medications'], saved)).toEqual({
-      update: { weight_kg: 80, medications: 'none' },
+  it('sends only changed fields, converted to metric', () => {
+    const values = { ...profileDefaults(saved, 'imperial'), weight: '180' };
+    expect(toProfileUpdate(values, ['weight'], saved, 'imperial')).toEqual({
+      update: { weight_kg: 81.6 },
       cleared: [],
     });
   });
 
-  it('reports emptied saved values instead of sending them', () => {
-    const values = { ...profileDefaults(saved), height_cm: '' };
-    expect(toProfileUpdate(values, ['height_cm'], saved)).toEqual({ update: {}, cleared: ['height_cm'] });
+  it('never re-sends untouched height/weight', () => {
+    const values = profileDefaults(saved, 'imperial');
+    expect(toProfileUpdate(values, [], saved, 'imperial')).toEqual({ update: {}, cleared: [] });
+  });
+
+  it('reports emptied saved values', () => {
+    const values = { ...profileDefaults(saved, 'metric'), height: '' };
+    expect(toProfileUpdate(values, ['height'], saved, 'metric')).toEqual({ update: {}, cleared: ['height'] });
   });
 });
