@@ -99,7 +99,7 @@ export function profileDefaults(p: Profile, units: Units): ProfileFormValues {
 }
 
 // Turns the fields the user changed into a PATCH body (always metric).
-// Emptied saved values are reported in `cleared`.
+// Emptying a saved value sends null (clear it) and lists it in `cleared`.
 export function toProfileUpdate(
   values: ProfileFormValues,
   changed: ProfileField[],
@@ -112,7 +112,10 @@ export function toProfileUpdate(
     const raw = values[field].trim();
     const serverField = SERVER_NAME[field];
     if (raw === '') {
-      if (saved[serverField as keyof Profile] !== null) cleared.push(field);
+      if (saved[serverField as keyof Profile] !== null) {
+        update[serverField] = null; // JSON Merge Patch: null clears it
+        cleared.push(field);
+      }
       continue;
     }
     if (field === 'height') update[serverField] = heightToCm(Number(raw), units);
@@ -121,4 +124,29 @@ export function toProfileUpdate(
     else update[serverField] = raw;
   }
   return { update: update as ProfileUpdate, cleared };
+}
+
+const FIELD_LABELS: Record<ProfileField, string> = {
+  height: 'height',
+  weight: 'weight',
+  birth_date: 'birth date',
+  sex: 'sex',
+  experience_level: 'experience level',
+  weekly_workout_goal: 'workouts per week',
+  available_time_minutes: 'minutes per session',
+  medications: 'medications',
+};
+
+// "Weight cleared. Kinetiq will keep using your last saved weight (74 kg) for
+// training plans." -- the server keeps the old value in the profile history
+// (ADR-0017), so the user is told rather than surprised.
+export function clearedMessage(field: ProfileField, saved: Profile, units: Units): string {
+  const label = FIELD_LABELS[field];
+  const unit =
+    field === 'height' ? (units === 'imperial' ? ' in' : ' cm')
+    : field === 'weight' ? (units === 'imperial' ? ' lb' : ' kg')
+    : '';
+  const last = profileDefaults(saved, units)[field];
+  const title = label.charAt(0).toUpperCase() + label.slice(1);
+  return `${title} cleared. Kinetiq will keep using your last saved ${label} (${last}${unit}) for training plans.`;
 }

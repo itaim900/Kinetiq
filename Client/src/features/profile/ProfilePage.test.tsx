@@ -76,11 +76,22 @@ describe('ProfilePage', () => {
     expect(calls).toBe(0);
   });
 
-  it('blocks clearing a saved value', async () => {
+  it('clears a saved value and explains the last saved value is kept', async () => {
+    let sent: unknown = null;
+    server.use(
+      http.patch('/api/v1/users/me', async ({ request }) => {
+        sent = await request.json();
+        return HttpResponse.json(profileJson({ height_cm: null }));
+      }),
+    );
     renderPage();
     fireEvent.change(await screen.findByLabelText('Height (cm)'), { target: { value: '' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save profile' }));
-    expect(await screen.findByText(/clearing a saved value isn't supported yet/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/height cleared\. kinetiq will keep using your last saved height \(178 cm\)/i),
+    ).toBeInTheDocument();
+    expect(sent).toEqual({ height_cm: null });
+    expect(screen.getByLabelText('Height (cm)')).toHaveValue('');
   });
 
   it('shows a server field error under the field', async () => {

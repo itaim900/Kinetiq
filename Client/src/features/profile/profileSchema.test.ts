@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { Profile } from '../../api';
-import { isValidDate, makeProfileSchema, profileDefaults, toProfileUpdate } from './profileSchema';
+import {
+  clearedMessage,
+  isValidDate,
+  makeProfileSchema,
+  profileDefaults,
+  toProfileUpdate,
+} from './profileSchema';
 
 const saved: Profile = {
   id: 1,
@@ -82,8 +88,28 @@ describe('toProfileUpdate', () => {
     expect(toProfileUpdate(values, [], saved, 'imperial')).toEqual({ update: {}, cleared: [] });
   });
 
-  it('reports emptied saved values', () => {
+  it('sends null for emptied saved values and lists them', () => {
     const values = { ...profileDefaults(saved, 'metric'), height: '' };
-    expect(toProfileUpdate(values, ['height'], saved, 'metric')).toEqual({ update: {}, cleared: ['height'] });
+    expect(toProfileUpdate(values, ['height'], saved, 'metric')).toEqual({
+      update: { height_cm: null },
+      cleared: ['height'],
+    });
+  });
+
+  it('ignores emptying a field that was never set', () => {
+    const values = { ...profileDefaults(saved, 'metric'), available_time_minutes: '' };
+    expect(toProfileUpdate(values, ['available_time_minutes'], saved, 'metric')).toEqual({
+      update: {},
+      cleared: [],
+    });
+  });
+});
+
+describe('clearedMessage', () => {
+  it('names the last saved value in the chosen units', () => {
+    expect(clearedMessage('weight', saved, 'metric')).toBe(
+      'Weight cleared. Kinetiq will keep using your last saved weight (74 kg) for training plans.',
+    );
+    expect(clearedMessage('weight', saved, 'imperial')).toContain('(163.1 lb)');
   });
 });

@@ -5,6 +5,7 @@ import { ApiError, type Profile, type ProfileUpdate } from '../../api';
 import { formatFeetInches, inToCm, type Units } from '../../lib/units';
 import {
   SERVER_FIELD_TO_FORM,
+  clearedMessage,
   makeProfileSchema,
   profileDefaults,
   toProfileUpdate,
@@ -38,21 +39,17 @@ export default function ProfileForm({ profile, units, onSave }: ProfileFormProps
     // dirtyFields = what the user actually changed since the last save.
     const changed = (Object.keys(dirtyFields) as ProfileField[]).filter((f) => dirtyFields[f]);
     const { update, cleared } = toProfileUpdate(values, changed, saved, units);
-    if (cleared.length > 0) {
-      for (const field of cleared) {
-        setError(field, { message: "Clearing a saved value isn't supported yet." });
-      }
-      return;
-    }
     if (Object.keys(update).length === 0) {
       setStatus('Nothing to save.');
       return;
     }
     try {
       const updated = await onSave(update);
+      // Built from the values saved BEFORE this save, so they name the old value.
+      const clearedNotes = cleared.map((f) => clearedMessage(f, saved, units));
       setSaved(updated);
       reset(profileDefaults(updated, units)); // new baseline: nothing is "changed" any more
-      setStatus('Profile saved.');
+      setStatus(clearedNotes.length > 0 ? clearedNotes.join(' ') : 'Profile saved.');
     } catch (err) {
       if (err instanceof ApiError && Object.keys(err.fieldErrors).length > 0) {
         for (const [field, messages] of Object.entries(err.fieldErrors)) {
