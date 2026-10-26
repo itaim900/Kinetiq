@@ -46,7 +46,7 @@ ctest --test-dir build -R InjuryController                  # or filter via ctes
   (`KINETIQ_BUILD_JOBS`, default 2).
 - **New `.cpp` files must be added by hand** to the explicit source lists in
   `Server/CMakeLists.txt` (`kinetiq_server` and/or `kinetiq_tests`). There is no glob.
-- CMake options: `KINETIQ_FETCH_LIBPQXX` (ON in CI/Docker: builds libpqxx 7.9.2 from source
+- CMake options: `KINETIQ_FETCH_LIBPQXX` (ON in CI/Docker: builds libpqxx 7.10.1 from source — same version as local MSYS2
   because Ubuntu's package is broken; OFF locally), `KINETIQ_BUILD_TESTS` (OFF in the Docker image).
 - DB integration tests use a separate `kinetiq_test` database (auto-created, migrations applied) and
   **self-skip** if Postgres is unreachable, so a "green" run without Docker up skips them silently.

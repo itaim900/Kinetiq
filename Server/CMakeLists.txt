@@ -18,7 +18,7 @@ if(KINETIQ_FETCH_LIBPQXX)
     set(SKIP_BUILD_TEST ON CACHE BOOL "" FORCE)  # don't build libpqxx's own test suite
     FetchContent_Declare(libpqxx
         GIT_REPOSITORY https://github.com/jtv/libpqxx.git
-        GIT_TAG 7.9.2
+        GIT_TAG 7.10.1   # keep in sync with local MSYS2 libpqxx (pacman -Q mingw-w64-ucrt-x86_64-libpqxx)
         GIT_SHALLOW TRUE)
     FetchContent_MakeAvailable(libpqxx)
     add_library(kinetiq_pqxx INTERFACE)

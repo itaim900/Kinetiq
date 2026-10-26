@@ -115,7 +115,7 @@ short viewports) via Playwright's actionability checks.
   `CMakeLists.txt` so CI/Docker (Linux) builds succeed.
 - **libpqxx on Linux:** Ubuntu's `libpqxx-dev` 7.8.1 has a header/lib `std::source_location`
   mismatch that breaks linking (even on C++17). CMake option **`KINETIQ_FETCH_LIBPQXX=ON`** builds
-  libpqxx from source (pinned **7.9.2**) for CI + Docker; local MSYS2 keeps the prebuilt (OFF).
+  libpqxx from source (pinned **7.10.1**, same as local MSYS2 — keep them in sync: a 7.9.2 pin broke CI on 2026-10-26 because the code uses `tx.exec(sql, pqxx::params{...})`, added in 7.10) for CI + Docker; local MSYS2 keeps the prebuilt (OFF).
 - **Images built in CI, not locally** — host only pulls + runs. Backend **`BIND_ADDR`** defaults to
   `127.0.0.1` (safe local dev); container sets `0.0.0.0` so the frontend nginx can reach it.
   **`DB_PASSWORD` is NOT baked into the image** — supplied at runtime by compose.
