@@ -38,7 +38,7 @@ Final acceptance test, run 2026-07-05 (images pulled **anonymously** from public
 | All containers up | ✅ postgres (healthy), backend, frontend |
 | `http://localhost:3000/api/v1/health` (via nginx proxy) | ✅ `{"db":"connected","status":"ok"}` |
 | `http://localhost:8080/api/v1/health` (backend direct) | ✅ `{"db":"connected","status":"ok"}` |
-| `http://localhost:3000/` (SPA served) | ✅ page title "KinetiQ" |
+| `http://localhost:3000/` (SPA served) | ✅ page title "Kinetiq" |
 | CI on `main` | ✅ green (backend + frontend) |
 | Publish images on `main` | ✅ both images built & pushed |
 
@@ -140,8 +140,8 @@ health check. All real features start in **Phase 2**.
 
 ## 8. Links
 
-- Repo: https://github.com/itaim900/KinetiQ
-- Actions: https://github.com/itaim900/KinetiQ/actions
+- Repo: https://github.com/itaim900/Kinetiq
+- Actions: https://github.com/itaim900/Kinetiq/actions
 - Images: `ghcr.io/itaim900/kinetiq-backend`, `ghcr.io/itaim900/kinetiq-frontend`
 - Merge PR: #39
 - Related docs: `01-data-model.md`, `02-api-contract.md`, `03-llm-port.md`, `04-architecture.md`,

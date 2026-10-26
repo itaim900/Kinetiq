@@ -4,14 +4,16 @@
    Scoped to .auth-backdrop so it never leaks into the authenticated view. */
 
 .auth-backdrop {
-  --auth-bg: #14161a;
-  --auth-bg-2: #1b1e23;
-  --auth-accent: #ff6a4d;
-  --auth-accent-dim: #c94f38;
-  --auth-ink: #f1efec;
-  --auth-muted: #a8a29b;
-  --auth-line: rgba(241, 239, 236, 0.1);
-  --auth-surface: rgba(255, 255, 255, 0.045);
+  /* Mapped onto the shared colour tokens (src/theme.css), so the login
+     screen follows light/night mode too. */
+  --auth-bg: var(--bg);
+  --auth-bg-2: var(--surface);
+  --auth-accent: var(--accent);
+  --auth-accent-dim: var(--glow-2);
+  --auth-ink: var(--ink);
+  --auth-muted: var(--muted);
+  --auth-line: var(--line);
+  --auth-surface: var(--surface-2);
 
   min-height: 100vh;
   display: flex;
@@ -47,7 +49,7 @@
   left: 50%;
   top: 42%;
   transform: translate(-50%, -50%);
-  background: radial-gradient(circle, var(--auth-accent) 0%, transparent 68%);
+  background: radial-gradient(circle, var(--glow) 0%, transparent 68%);
   opacity: 0.28;
   animation: auth-pulse 7s ease-in-out infinite;
 }
@@ -112,7 +114,7 @@
   border-radius: 16px;
   padding: 2.25rem 2rem;
   backdrop-filter: blur(20px);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--card-shadow);
 }
 
 .auth-card h1 {
@@ -149,7 +151,7 @@
   width: 100%;
   box-sizing: border-box;
   padding: 0.7rem 0.85rem;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--surface-2);
   border: 1px solid var(--auth-line);
   border-radius: 8px;
   color: var(--auth-ink);
@@ -158,13 +160,13 @@
 }
 
 .auth-card input::placeholder {
-  color: rgba(241, 239, 236, 0.35);
+  color: var(--muted);
 }
 
 .auth-card input:focus-visible {
   outline: none;
   border-color: var(--auth-accent);
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--surface-2);
 }
 
 .auth-card button[type="submit"] {
@@ -173,7 +175,7 @@
   border: none;
   border-radius: 8px;
   background: var(--auth-accent);
-  color: #1a0d08;
+  color: var(--accent-ink);
   font-weight: 700;
   font-size: 0.95rem;
   cursor: pointer;
@@ -201,10 +203,10 @@
 .auth-card [role="alert"] {
   margin: 0;
   padding: 0.65rem 0.8rem;
-  background: rgba(255, 106, 77, 0.12);
-  border: 1px solid rgba(255, 106, 77, 0.35);
+  background: var(--error-soft);
+  border: 1px solid var(--error);
   border-radius: 8px;
-  color: #ffb3a1;
+  color: var(--error);
   font-size: 0.85rem;
 }
 

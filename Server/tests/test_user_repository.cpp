@@ -107,3 +107,25 @@ TEST(InMemoryUserRepositoryTest, Update_ChangesStoredFields) {
     // findByEmail must reflect the update too, not just findById.
     EXPECT_EQ(repo.findByEmail("grace@example.com")->passwordHash, "new-hash");
 }
+
+// Slice 2 (#19): the fake stores a whole User by value, so profile fields
+// round-trip through update()/findById() with no fake changes -- guard it.
+TEST(InMemoryUserRepositoryTest, Update_PersistsProfileFields) {
+    InMemoryUserRepository repo;
+    User user;
+    user.email = "mem-profile@example.com";
+    user.passwordHash = "x";
+    const User saved = repo.save(user);
+
+    User modified = saved;
+    modified.weightKg = 70.0;
+    modified.experienceLevel = "beginner";
+    modified.unitPreference = "imperial";
+    repo.update(modified);
+
+    const auto found = repo.findById(saved.id);
+    ASSERT_TRUE(found.has_value());
+    EXPECT_EQ(found->weightKg, 70.0);
+    EXPECT_EQ(found->experienceLevel, "beginner");
+    EXPECT_EQ(found->unitPreference, "imperial");
+}

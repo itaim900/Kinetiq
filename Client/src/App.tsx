@@ -1,7 +1,21 @@
 import { useEffect, useState } from 'react';
-import { fetchHealth, fetchMe, type AuthResult, type AuthUser, type HealthStatus } from './api';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
+import {
+  fetchHealth,
+  fetchMe,
+  setUnauthorizedHandler,
+  type AuthResult,
+  type AuthUser,
+  type HealthStatus,
+} from './api';
+import AppShell from './AppShell';
+import ThemeToggle from './ThemeToggle';
+import { UnitsProvider } from './lib/UnitsContext';
 import AuthPage from './features/auth/AuthPage';
+import InjuriesPage from './features/injuries/InjuriesPage';
+import ProfilePage from './features/profile/ProfilePage';
 import './features/auth/auth-theme.css';
+import './app-theme.css';
 import { clearToken, getToken, saveToken } from './lib/tokenStorage';
 
 export default function App() {
@@ -9,6 +23,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [isRestoringSession, setIsRestoringSession] = useState(true);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     fetchHealth()
@@ -31,7 +46,18 @@ export default function App() {
       .finally(() => setIsRestoringSession(false));
   }, []);
 
+  // Any authenticated call that gets a 401 (24h token expired) lands here.
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      clearToken();
+      setCurrentUser(null);
+      setNotice('Your session expired — please log in again.');
+    });
+    return () => setUnauthorizedHandler(null);
+  }, []);
+
   function handleAuthenticated(result: AuthResult) {
+    setNotice(null);
     saveToken(result.access_token);
     setCurrentUser(result.user);
   }
@@ -57,10 +83,16 @@ export default function App() {
               </span>
             </>
           )}
+          <ThemeToggle />
         </div>
         <div className="auth-card">
-          <h1>KinetiQ</h1>
+          <h1>Kinetiq</h1>
           <p className="auth-tagline">Plan your training. Track your progress.</p>
+          {notice && (
+            <p className="auth-notice" role="status">
+              {notice}
+            </p>
+          )}
           {isRestoringSession ? (
             <p>Checking session…</p>
           ) : (
@@ -71,62 +103,18 @@ export default function App() {
     );
   }
 
+  // Logged in: the router decides which page fills the shell's <Outlet/>.
   return (
-    <main
-      style={{
-        fontFamily: 'system-ui, sans-serif',
-        padding: '2rem',
-        maxWidth: 640,
-        margin: '0 auto',
-      }}
-    >
-      <h1>KinetiQ</h1>
-      <p>Walking skeleton — the React frontend talking to the C++ backend.</p>
-
-      <section
-        aria-label="backend-health"
-        style={{
-          marginTop: '1.5rem',
-          padding: '1rem 1.25rem',
-          border: '1px solid #ddd',
-          borderRadius: 12,
-        }}
-      >
-        <h2 style={{ marginTop: 0 }}>Backend health</h2>
-        {error && (
-          <p role="alert" style={{ color: '#b00020' }}>
-            Backend unreachable: {error}
-          </p>
-        )}
-        {!error && !health && <p>Checking…</p>}
-        {health && (
-          <ul>
-            <li>
-              API status: <strong>{health.status}</strong>
-            </li>
-            <li>
-              Database: <strong>{health.db}</strong>
-            </li>
-          </ul>
-        )}
-      </section>
-
-      <section
-        aria-label="auth"
-        style={{
-          marginTop: '1.5rem',
-          padding: '1rem 1.25rem',
-          border: '1px solid #ddd',
-          borderRadius: 12,
-        }}
-      >
-        <p>
-          Logged in as <strong>{currentUser.display_name}</strong> ({currentUser.email})
-        </p>
-        <button type="button" onClick={handleLogout}>
-          Log out
-        </button>
-      </section>
-    </main>
+    <BrowserRouter>
+      <UnitsProvider>
+        <Routes>
+          <Route element={<AppShell user={currentUser} onLogout={handleLogout} />}>
+            <Route path="/injuries" element={<InjuriesPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="*" element={<Navigate to="/injuries" replace />} />
+          </Route>
+        </Routes>
+      </UnitsProvider>
+    </BrowserRouter>
   );
 }

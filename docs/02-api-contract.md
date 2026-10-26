@@ -1,4 +1,4 @@
-# User-Client API Contract — KinetiQ (v1)
+# User-Client API Contract — Kinetiq (v1)
 
 **Status:** Approved (design phase)
 **Last updated:** 2026-06-23
@@ -124,8 +124,15 @@ Partial update. Request (any subset):
 `{ height_cm, weight_kg, birth_date, sex, experience_level, unit_preference,
    weekly_workout_goal, available_time_minutes, preferences, medications }`
 
+**JSON Merge Patch (RFC 7396):** an absent key = unchanged, a value = set it, **`null` = clear it**.
+`unit_preference` can't be cleared (`422`). Values are always **metric** (the client converts for
+imperial display). Every changed field except `unit_preference` is recorded in
+`user_profile_history` (old → new, with a timestamp) — see ADR-0017.
+
 Test cases:
 - ✅ partial update changes only provided fields → `200`
+- ✅ `{"weight_kg": null}` clears it → `200` with `"weight_kg": null`
+- ❌ `{"unit_preference": null}` → `422` naming `unit_preference`
 - ❌ `weight_kg` negative or out of range → `422`
 - ❌ `experience_level` not in `{beginner,intermediate,advanced}` → `422`
 - ❌ unauthenticated → `401`
@@ -134,16 +141,56 @@ Test cases:
 
 ## Injuries (drives the rule-based safety filter)
 
+An injury is either a **known condition** from the catalog (region, type and muscles come from
+the catalog and are **locked**) or an **unknown injury** the user describes. Design:
+`docs/superpowers/specs/2026-10-21-injury-conditions-catalog-design.md`.
+
 ### `GET /users/me/injuries` 🔒 — list
-### `POST /users/me/injuries` 🔒
-Request: `{ body_region, severity, notes }` → `201`
-### `PATCH /users/me/injuries/{id}` 🔒 — e.g. set `active: false` when healed
+### `POST /users/me/injuries` 🔒 → `201`
+Two request shapes:
+```jsonc
+// Known condition
+{ "condition_id": 1, "severity": "moderate", "notes": "optional" }
+// Unknown injury (muscle_ids optional; duplicates removed; role "primary")
+{ "body_region": "wrist_hand", "injury_type": "joint", "muscle_ids": [17, 18],
+  "severity": "mild", "notes": "optional" }
+```
+- `injury_type`: `muscle | bone | tendon_ligament | joint | other`; `body_region`: a slug from
+  `GET /body-regions`.
+- Known condition + any of `body_region` / `injury_type` / `muscle_ids` → `422` naming that field.
+### `PATCH /users/me/injuries/{id}` 🔒 → `200`
+Partial update. Known condition: only `severity`, `notes`, `active`; locked fields → `422`. To change
+the condition, delete and re-add. Unknown injury: also `body_region`, `injury_type`, `muscle_ids`
+(**replaces** the set; `[]` clears it). `"notes": null` (or `""`) clears the notes.
 ### `DELETE /users/me/injuries/{id}` 🔒 → `204`
 
+Response (every injury):
+```jsonc
+{ "id": 7, "user_id": 3,
+  "condition": { "id": 1, "name": "ACL tear", "icd11_code": "NC93.62" },   // null if unknown
+  "body_region": "knee", "injury_type": "tendon_ligament", "severity": "moderate",
+  "muscles": [ { "id": 14, "name": "Quads", "role": "secondary" } ],     // primary first
+  "active": true, "notes": null, "created_at": "..." }
+```
+
 Test cases:
-- ✅ create injury → appears in list
-- ❌ `severity` not in `{mild,moderate,severe}` → `422`
+- ✅ create injury (either shape) → appears in list
+- ✅ known condition → region/type/muscles from the catalog
+- ❌ `severity` not in `{mild,moderate,severe}` / bad `injury_type` → `422`
+- ❌ unknown `condition_id`, `body_region` or muscle id → `422` naming the field
+- ❌ known condition + locked field (POST or PATCH) → `422` naming the field
 - ❌ PATCH/DELETE an injury owned by another user → `404` (do not leak existence)
+
+---
+
+## Reference catalog (read-only) 🔒
+
+### `GET /body-regions` — `[{slug, name}]` (14 fixed regions)
+### `GET /muscles` — `[{id, name, muscle_group}]` (28)
+### `GET /injury-conditions` — `[{id, slug, name, icd11_code|null, body_region, injury_type, muscles: [{id, name, role}]}]` (17)
+
+Conditions are general information, **not medical advice**; the UI must say so. ICD-11 codes and
+muscle sources are listed in the conditions-catalog spec. No token → `401`.
 
 ---
 

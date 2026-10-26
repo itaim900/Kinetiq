@@ -1,4 +1,4 @@
-# LLM Port & Workout Generation — KinetiQ (v1)
+# LLM Port & Workout Generation — Kinetiq (v1)
 
 **Status:** Approved (design phase)
 **Last updated:** 2026-06-24

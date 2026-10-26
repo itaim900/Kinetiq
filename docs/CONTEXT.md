@@ -1,4 +1,4 @@
-# KinetiQ — context brief (for humans & AI agents)
+# Kinetiq — context brief (for humans & AI agents)
 
 Dense summary to bring a new agent up to speed cheaply. For detail, follow the linked docs.
 
@@ -91,6 +91,16 @@ short viewports) via Playwright's actionability checks.
   running for days, squatting ports and wasting RAM — the wrapper binds the child process tree to
   a Windows Job Object (`JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`) so it's killed automatically if the
   wrapper process ever ends, even via a forced kill. Verified through 4 levels of process nesting.
+- **Git hooks** in `.githooks/` (enable: `git config core.hooksPath .githooks`): pre-commit checks the
+  changed half, pre-push runs everything and blocks if DB tests skipped. Spec:
+  `docs/superpowers/specs/2026-10-21-git-hooks-design.md`.
+- **Compose project is named `kinetiq`** (fixed `name:` in `docker-compose.yml`, so it no longer
+  depends on the folder name — the folder was renamed `Fit App` → `Kinetiq`). Data volume
+  **`kinetiq_pgdata`** (copied 2026-10-25 from the old `fitapp_kinetiq_pgdata`, verified identical).
+  `docker compose up -d` works again. Old volumes `fitapp_kinetiq_pgdata`, `fitapp_fitapp_pgdata`,
+  `kinetiq_kinetiq_pgdata` are kept as a backup (backlog: delete once confident).
+- Docker Desktop's built-in **Kubernetes was turned off** (2026-10-21) to save RAM; settings backup
+  at `%APPDATA%\Docker\settings-store.json.bak-2026-10-21`.
 - **GitHub CLI (`gh`)** installed at `C:\Program Files\GitHub CLI\gh.exe` (v2.95.0), logged in as
   `itaim900`. On system PATH; restart terminal/Cursor if `gh` not found. Token scopes: `repo`,
   `read:org`, `gist` (no `read:packages` unless refreshed).
@@ -105,7 +115,7 @@ short viewports) via Playwright's actionability checks.
   `CMakeLists.txt` so CI/Docker (Linux) builds succeed.
 - **libpqxx on Linux:** Ubuntu's `libpqxx-dev` 7.8.1 has a header/lib `std::source_location`
   mismatch that breaks linking (even on C++17). CMake option **`KINETIQ_FETCH_LIBPQXX=ON`** builds
-  libpqxx from source (pinned **7.9.2**) for CI + Docker; local MSYS2 keeps the prebuilt (OFF).
+  libpqxx from source (pinned **7.10.1**, same as local MSYS2 — keep them in sync: a 7.9.2 pin broke CI on 2026-10-26 because the code uses `tx.exec(sql, pqxx::params{...})`, added in 7.10) for CI + Docker; local MSYS2 keeps the prebuilt (OFF).
 - **Images built in CI, not locally** — host only pulls + runs. Backend **`BIND_ADDR`** defaults to
   `127.0.0.1` (safe local dev); container sets `0.0.0.0` so the frontend nginx can reach it.
   **`DB_PASSWORD` is NOT baked into the image** — supplied at runtime by compose.
@@ -162,7 +172,17 @@ endpoint → UI), **auth first** (every other endpoint is 🔒).
   `docs/02-api-contract.md`. **Explicitly deferred to future slices:** Google OAuth,
   forgot-password reset (Client has a visual-only placeholder), account deletion, login
   rate-limiting, email verification.
-- **Slice 2 — Profile & Injuries:** #19 `/users/me`, #20 injuries CRUD, #25 FE forms (RHF+Zod).
+- **Slice 2 — Profile & Injuries: COMPLETE (2026-10-25, branch `slice-2-profile`; merge to `main` pending owner's go-ahead).**
+  Design brainstormed (8 locked decisions, see spec) + Stage A TDD plan written.
+  **Stage A (#19 `GET`/`PATCH /users/me`) ✅ DONE:** grew `domain::User` + `domain::ProfilePolicy`
+  validator, `PgUserRepository` maps/persists all profile columns (no migration — Slice 0 built
+  them), `app::UpdateProfile` (load-modify-save), `ProfileDto` + a new `UserController` (GET/PATCH
+  on one Crow multi-method route, RFC 9457 field errors), wired into `main.cpp`.
+  **Stage B (#20 injuries CRUD) ✅ DONE:** full new vertical stack — `domain::Injury` +
+  `InjuryPolicy`, `IInjuryRepository` + fake, `PgInjuryRepository` + `AutoCommitPgInjuryRepository`,
+  one cohesive `app::InjuryService` (shared ownership check → **404** for another user's injury),
+  `InjuryDto` + `InjuryController` (collection GET/POST + item PATCH/DELETE by `<int>` id), wired
+  into `main.cpp`. `ctest` **122/122**, live-verified via curl. Still to do: #25 FE forms (RHF+Zod).
 - **Slice 3 — Exercises + seed:** #21 catalog endpoints, #22 seed script, #26 FE browser.
 - **Slice 4 — Manual workouts:** #23 workouts CRUD, #27 FE builder.
 
@@ -197,13 +217,25 @@ port/fake → green → refactor.
 - `phase-1-summary.md` — Phase 1 recap (file inventory, decisions, verification)
 - `phase-2-plan.md` — Phase 2 plan (slices, locked decisions, TDD workflow)
 - `phase-2-slice-1-auth.md` — Slice 1 (Auth) step-by-step build log: every decision and file, in order
+- `phase-2-slice-2-profile-injuries.md` — Slice 2 (Profile & Injuries) living build log
+- `superpowers/specs/2026-07-17-slice-2-profile-injuries-design.md` — Slice 2 design spec (8 decisions)
+- `superpowers/plans/2026-07-17-slice-2a-profile-backend.md` — Slice 2 Stage A bite-sized TDD plan
+- `superpowers/plans/2026-07-25-slice-2b-injuries-backend.md` — Slice 2 Stage B bite-sized TDD plan
+- `superpowers/specs/2026-07-25-injury-muscle-link-design.md` — injury/muscle link spec (E1–E6; partly superseded)
+- `superpowers/plans/2026-07-25-injury-muscle-link.md` — its plan (Tasks 1–2 done; 3–8 superseded)
+- `superpowers/specs/2026-10-21-injury-conditions-catalog-design.md` — multi-muscle injuries + conditions catalog (C1–C9, ICD-11 sources)
+- `superpowers/plans/2026-10-21-injury-conditions-catalog.md` — its 6-task TDD plan (done)
+- `superpowers/specs/2026-10-21-git-hooks-design.md` + `plans/2026-10-21-git-hooks.md` — local git hooks
+- `backlog.md` — every deferred "later, not never" item in one list (incl. owner's product ideas)
+- `superpowers/specs/2026-10-22-stage-c-frontend-design.md` + `plans/2026-10-22-stage-c-frontend.md` — Stage C UI
+- `superpowers/specs/2026-10-25-themes-units-clearing-design.md` + `plans/2026-10-25-themes-units-clearing.md` — themes, units, clearing, ops
 - `adr/` — decision records (note: 0003 & 0005 superseded by 0011 & 0012)
 - `learning/` — git-ignored personal notes: `code-walkthrough.md`, `how-to-run.md`,
   `session-log-phase1-spike.md`
 
 ## GitHub
-Repo `itaim900/KinetiQ` (private). Backlog = **4 milestones** (Phase 0–3) + **38 issues** + labels.
-Actions: https://github.com/itaim900/KinetiQ/actions
+Repo `itaim900/Kinetiq` (private). Backlog = **4 milestones** (Phase 0–3) + **38 issues** + labels.
+Actions: https://github.com/itaim900/Kinetiq/actions
 
 ## How to run
 See `docs/learning/how-to-run.md`. Two ways:
@@ -216,19 +248,36 @@ See `docs/learning/how-to-run.md`. Two ways:
 **Ports:** 5173 (Vite dev), 8080 (backend), 5432 (Postgres dev), 3000 (containerized app UI).
 
 ## Next steps
-**Phase 2, Slice 1 — Auth: ✅ COMPLETE** (`#16`, `#17`, `#18`, `#24` all done, 2026-07-16). Full
-narrative in `docs/phase-2-slice-1-auth.md`.
+**Phase 2, Slice 2 — Profile & Injuries: COMPLETE** (branch `slice-2-profile`, merge to `main` pending). Full narrative
+in `docs/phase-2-slice-2-profile-injuries.md`; design in the spec (8 locked decisions).
 
-**Phase 2, Slice 2 — Profile & Injuries** is next (see `docs/phase-2-plan.md`), same TDD rhythm
-per `02-api-contract.md`:
-1. **#19** `GET`/`PATCH /users/me` — full profile (biometrics, preferences, `experience_level`,
-   goals), partial update semantics.
-2. **#20** Injuries CRUD (`/users/me/injuries`) — drives the rule-based safety filter in Phase 3.
-3. **#25** Frontend: profile + injuries forms (React Hook Form + Zod — first use of either in
-   this codebase).
+- **Stage A — #19 `GET`/`PATCH /users/me`: ✅ DONE** (2026-07-25). `ctest` 94/94, live-verified.
+- **Stage B — #20 Injuries CRUD (`/users/me/injuries`): ✅ DONE** (2026-07-25). Full new vertical
+  stack; ownership check returns **404** for another user's injury. `ctest` 122/122, live-verified.
+  Drives the Phase 3 rule-based safety filter.
+- **Stage B extension — Injury conditions catalog: ✅ DONE** (2026-10-21). Injuries affect
+  **several muscles**. A catalog of 17 known conditions (ICD-11-anchored; migration `0004`) maps
+  each to muscles with a role (primary/secondary). **Known condition = locked** (region, type,
+  muscles from the catalog; sending them → 422 naming the field); **unknown injury** = user picks
+  region (fixed list of 14, FK-enforced), type, muscles (`user_injury_muscles`, migration `0005`).
+  New read-only `GET /body-regions`, `/muscles`, `/injury-conditions`. `kinetiq_tests` **171/171,
+  0 skipped**; live-verified. Spec `superpowers/specs/2026-10-21-injury-conditions-catalog-design.md`
+  (supersedes July E2/E4/E5), plan `superpowers/plans/2026-10-21-injury-conditions-catalog.md`.
+  Secondary-muscle mappings are project judgement, pending physio review.
+- **Stage C — #25 Frontend: ✅ DONE (2026-10-25).** Injuries + Profile tabs (react-router 7, React
+  Hook Form + zod 4.6.7), light/night themes, Metric | Imperial switch, clearing values with profile
+  history (migration 0006), repo renamed `itaim900/Kinetiq`, Compose fixed, ADRs 0013–0017.
+  **Browser-verified** with Playwright on the real stack (found + fixed one bug: units switch after
+  save lost the new values). Client 94/94, server 184/184. Build log in
+  `docs/phase-2-slice-2-profile-injuries.md`; deferred items in **`docs/backlog.md`**.
+  **Next:** merge `slice-2-profile` → `main`, then **Slice 3 — Exercises + seed (#21, #22, #26)**.
 
-One carry-over worth remembering: reuse the `AutoCommitPgUserRepository` pattern
-(connection-per-call, not one shared long-lived transaction) for any new repository Slice 2 wires
-directly into `main.cpp`'s routes.
+**Carry-overs worth remembering:**
+- Reuse the `AutoCommitPgUserRepository` pattern (connection-per-call, not one shared long-lived
+  transaction) for the new `PgInjuryRepository` wired into `main.cpp`'s routes.
+- When a build's success gates the next command, check the real exit code (`; echo exit=$?`), not a
+  piped `tail` — a pipeline reports the last command's status, masking build failures.
+- Merge `slice-2-profile` → `main` when the whole slice (A+B+C) is complete and verified.
 
-Capture Phase 2 locked decisions + auth-as-authenticator as ADRs (0013–00xx).
+Capture Phase 2 locked decisions + auth-as-authenticator as ADRs (0013–00xx); Slice 2's D1
+(expand-User) and D2 (load-modify-save) are candidates too.

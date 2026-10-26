@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Runs the KinetiQ server or client with automatic cleanup.
+  Runs the Kinetiq server or client with automatic cleanup.
 
 .DESCRIPTION
   Starts the given target (server or client) and binds its lifetime to this

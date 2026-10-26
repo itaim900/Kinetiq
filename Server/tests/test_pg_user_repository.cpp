@@ -130,3 +130,58 @@ TEST_F(DbTest, PgUserRepository_Update_ChangesStoredFields) {
     ASSERT_TRUE(found.has_value());
     EXPECT_EQ(found->passwordHash, "new-hash");
 }
+
+// Slice 2 (#19): profile columns must round-trip through update() + findById().
+TEST_F(DbTest, PgUserRepository_Update_PersistsProfileFields) {
+    if (!available()) GTEST_SKIP() << "no test database reachable";
+
+    PgUserRepository repo(tx());
+    User user;
+    user.email = "pg-profile@example.com";
+    user.passwordHash = "hashed";
+    const User saved = repo.save(user);
+
+    User modified = saved;
+    modified.sex = "female";
+    modified.birthDate = "1988-03-09";
+    modified.heightCm = 168.5;
+    modified.weightKg = 61.25;
+    modified.experienceLevel = "advanced";
+    modified.unitPreference = "imperial";
+    modified.weeklyWorkoutGoal = 5;
+    modified.availableTimeMinutes = 60;
+    modified.medications = "none";
+    repo.update(modified);
+
+    const auto found = repo.findById(saved.id);
+    ASSERT_TRUE(found.has_value());
+    EXPECT_EQ(found->sex, "female");
+    EXPECT_EQ(found->birthDate, "1988-03-09");
+    ASSERT_TRUE(found->heightCm.has_value());
+    EXPECT_DOUBLE_EQ(*found->heightCm, 168.5);
+    ASSERT_TRUE(found->weightKg.has_value());
+    EXPECT_DOUBLE_EQ(*found->weightKg, 61.25);
+    EXPECT_EQ(found->experienceLevel, "advanced");
+    EXPECT_EQ(found->unitPreference, "imperial");
+    EXPECT_EQ(found->weeklyWorkoutGoal, 5);
+    EXPECT_EQ(found->availableTimeMinutes, 60);
+    EXPECT_EQ(found->medications, "none");
+}
+
+// A freshly-saved user has NULL profile columns -> all optionals empty,
+// unitPreference at the DB default 'metric'.
+TEST_F(DbTest, PgUserRepository_FindById_NewUserHasEmptyProfile) {
+    if (!available()) GTEST_SKIP() << "no test database reachable";
+
+    PgUserRepository repo(tx());
+    User user;
+    user.email = "pg-empty-profile@example.com";
+    user.passwordHash = "hashed";
+    const User saved = repo.save(user);
+
+    const auto found = repo.findById(saved.id);
+    ASSERT_TRUE(found.has_value());
+    EXPECT_FALSE(found->sex.has_value());
+    EXPECT_FALSE(found->weightKg.has_value());
+    EXPECT_EQ(found->unitPreference, "metric");
+}

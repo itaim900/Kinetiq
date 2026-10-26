@@ -1,10 +1,10 @@
-# KinetiQ
+# Kinetiq
 
 An AI-powered web application that helps people create personalized workout plans.
 
 ## Overview
 
-KinetiQ uses an AI agent to generate workout plans tailored to a user's goals,
+Kinetiq uses an AI agent to generate workout plans tailored to a user's goals,
 experience level, available equipment, and schedule.
 
 - **Backend:** C++ (Crow + libpqxx), built with CMake + Ninja on the MSYS2 UCRT64 toolchain
@@ -58,6 +58,9 @@ npm install && npm run dev   # http://localhost:5173, proxies /api -> server
 Health check: `GET http://localhost:8080/api/v1/health` →
 `{"status":"ok","db":"connected"}`.
 
+**Git hooks (once per clone):** `git config core.hooksPath .githooks`. Commits check the part of the
+app you changed; pushes run the full build + test suite (Postgres must be running).
+
 ## Running the whole app with Docker (any machine)
 
 No toolchain required — only Docker. Prebuilt images are published to GHCR by CI.
@@ -89,4 +92,4 @@ dev proxy → C++ Crow backend → libpqxx → PostgreSQL, with `GET /api/v1/hea
 DB status, GoogleTest and Vitest harnesses wired, and the first migration applied. **CI** builds and
 tests both halves on every push, and the app is **containerized** (images published to GHCR, full
 stack via `docker-compose.prod.yml`). Next: Phase 2 (core domain). See
-[`docs/05-roadmap.md`](./docs/05-roadmap.md) and the [issues](https://github.com/itaim900/KinetiQ/issues).
+[`docs/05-roadmap.md`](./docs/05-roadmap.md) and the [issues](https://github.com/itaim900/Kinetiq/issues).

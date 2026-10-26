@@ -10,6 +10,134 @@ For durable/architectural facts, also update `docs/CONTEXT.md` (and add an ADR w
 
 ---
 
+## 2026-10-25 — VS Code
+- **Stage C finished:** injuries list/cards/healed/delete, injury form (condition search, locked
+  catalog muscles, unlisted path), profile form — all TDD (client 94/94).
+- **Owner's additions, designed + built (12 tasks):** repo → `itaim900/Kinetiq`; Compose fixed
+  (fixed names, data copied, old volumes kept); npm audit → 0 prod advisories (zod 4.6.7); ADRs
+  0013–0017; light/night themes (white/near-black accent); Metric | Imperial switch (account);
+  JSON Merge Patch clearing + `user_profile_history` (migration 0006; server 184/184).
+- **Browser check** (Playwright, real stack) passed; **found + fixed a bug** (units switch after save
+  lost new values). Fixed a flaky test (async timeout 3 s) and an OOM build (`-j 2`, hooks capped).
+- **`docs/backlog.md`** created: forgot password, subscription idea ($5.99, refund after 10 verified
+  workouts), user-agreement disclosure, delete-my-data, toolchain upgrade, favicon, …
+- Next: merge `slice-2-profile` → `main` (owner's go-ahead), then Slice 3 (exercise catalog).
+
+## 2026-10-22 — VS Code
+- **Pushed** the injury conditions catalog (pre-push full check green) and demoed it live through
+  the Vite proxy (rotator cuff strain + an unlisted wrist injury).
+- **Stage C designed** (brainstorm with browser mockups → spec → 9-task plan): tabs layout,
+  single searchable condition field, inline forms, React Router + plain fetch (no TanStack Query),
+  rename to **Kinetiq**. Owner wants a `docs/backlog.md` for "later, not never" ideas (Task 9).
+- **Built Tasks 1–3:** rename (15 display occurrences; repo links kept), libs + `authFetch` +
+  typed API + stateful MSW, app shell + routing + 401 logout. Client 31/31, server 171/171.
+- Lesson: a redirect happens a moment *after* the shell renders — tests must wait for the page
+  heading before checking the active tab (two failures fixed, re-run 3x stable).
+- Unpushed commits on `slice-2-profile`. `npm audit` warnings on dev tooling → backlog.
+- Next: Stage C **Task 4** (injury cards, healed section, mark healed, delete confirm).
+
+## 2026-10-21 — VS Code
+- **Expanded `CLAUDE.md`** (via `/init`): kept the session rules and added build/test commands
+  (including how to run a single GoogleTest or Vitest test), env vars, the server hexagonal layout
+  (the two repository layers: plain Pg vs AutoCommit), auth as a plain function instead of Crow
+  middleware, the testing pyramid, and the client layout. No code changes.
+- **Step 0 re-verification after ~3 months away:** client 22/22, server 122/122 (0 skipped),
+  live health OK via Vite proxy. Found: folder rename `Fit App`→`Kinetiq` breaks
+  `docker compose up -d` (use `docker start kinetiq-postgres`); turned off Docker Desktop
+  Kubernetes (3 stray `hello-web` pods eating RAM).
+- **Git hooks** (brainstorm → spec → plan → inline TDD-style execution): tracked `.githooks/`
+  (`lib.sh` + `pre-commit` + `pre-push`), `.gitattributes` forces LF. pre-commit checks only the
+  changed half and warns on skipped DB tests; pre-push runs everything and blocks on skips (detected
+  from GoogleTest's `[  SKIPPED ] N` line, because the binary exits 0 when DB tests skip). All 7
+  spec scenarios verified (docs-only skip, failing test blocks, per-half selection, DB-down
+  warn/block, healthy push).
+- **Injury type (July plan Tasks 1–2):** migration 0003 + `injury_type` through every layer; done
+  together so every commit stayed green under the new hook.
+- **Redesign → injury conditions catalog (brainstorm → spec → plan → 6 TDD tasks):** injuries now
+  affect several muscles. 17 ICD-11-anchored known conditions (locked region/type/muscles) or
+  unknown injuries (user picks from 14 fixed regions + 28 muscles). Migrations 0004 (catalog) +
+  0005 (injury link); `ICatalogRepository` + Pg adapters; `InjuryService` two shapes; 3 new GET
+  endpoints. 171/171 tests, 0 skipped; live-verified with curl. No open injury→muscle database
+  exists; secondary muscles are our judgement (flagged for physio review).
+- Next: Stage C (#25) — React profile + injuries forms with the not-medical-advice notice.
+
+## 2026-07-25 — VS Code (3)
+- **Reviewed Stages A+B with the owner** (architecture walkthrough, JWT trade-offs/cookie
+  discussion — kept `localStorage` + 24h JWT for now, deferred cookie/refresh-token hardening to a
+  future slice) then **designed and planned an extension**: injuries can now optionally reference
+  the `Muscles` catalog. Owner's ask specifically noted not all injuries are muscle injuries
+  (bone/tendon/joint matter too) — design keys off a new `injury_type` enum + optional `muscle_id`
+  valid only when `injury_type == "muscle"` (never required even then), single muscle per injury
+  (no join table), and seeds 16 muscles now from `01-data-model.md`'s already-documented Phase 2
+  list so Slice 3's full catalog seed stays compatible. Also adds a small read-only `GET /muscles`
+  (+`/{id}`) endpoint, needed both to validate `muscle_id` cleanly (422, not a raw FK-violation 500)
+  and to unblock Stage C's future muscle picker.
+- 6 decisions locked (E1–E6) in
+  `docs/superpowers/specs/2026-07-25-injury-muscle-link-design.md`; full 8-task bite-sized TDD plan
+  in `docs/superpowers/plans/2026-07-25-injury-muscle-link.md` (migration → domain →
+  `IMuscleRepository` stack → `InjuryService` validation/cascade → `MuscleController` →
+  extend `InjuryDto`/`InjuryController` → wire `main.cpp`). Both committed; **no code executed
+  yet** — owner chose inline execution (not subagent-driven) for learning visibility, to start next
+  session at Task 1.
+- Verified several Crow API details against the vendored header before writing plan code (avoids a
+  wasted build cycle next session): `crow::json::wvalue::list()` doesn't exist in this Crow version
+  (already worked around in Stage B via the `wvalue(vector<wvalue>)` ctor); confirmed `.i()`/`.b()`/
+  `.t()==type::Null` all exist. Also confirmed `Migrator` sorts migration files lexically by
+  filename, so `0003_injury_muscle_link.sql` slots in correctly after `0002_core_schema.sql`.
+- **One real gotcha flagged in the plan itself:** `DbTest`'s `ensureTestDatabaseReady()` silently
+  marks the whole suite unavailable (tests SKIP, not FAIL) if a migration throws — so Task 1
+  includes an explicit `psql` verification step (columns + seed count) rather than trusting `ctest`
+  output alone to catch a broken migration.
+- Pushed `slice-2-profile` to origin (14 commits at that point; now 16 with the two plan/spec
+  commits from this session).
+- Next: execute the injury/muscle link plan **Task 1 onward, inline**, same red→green→commit
+  rhythm as Stages A/B.
+
+## 2026-07-25 — VS Code (2)
+- **Completed Stage B — `#20` injuries CRUD** (`/users/me/injuries`), branch `slice-2-profile`,
+  6 commits, red→green→commit each: B1 `domain::Injury` + `InjuryPolicy` (5 tests); B2
+  `IInjuryRepository` + `InMemoryInjuryRepository` fake (5); B3 `PgInjuryRepository` +
+  `AutoCommitPgInjuryRepository` (10 incl. real Postgres); B4 one cohesive `app::InjuryService`
+  with a shared `requireOwned()` → **`InjuryNotFoundError` → 404** for another user's injury (6);
+  B5 `InjuryDto` + `InjuryController` (collection GET/POST + item PATCH/DELETE by `<int>` id, 7
+  HTTP tests incl. both cross-user 404s); B6 wired `main.cpp`.
+- **Ownership isolation** is the core security property here: update/delete on an injury you don't
+  own returns 404 (never 403 — don't even leak that it exists), enforced in the service and proven
+  at the HTTP layer with two users.
+- **Crow API gotcha, caught before coding:** verified the watch-items from the plan against the
+  vendored `crow_all.h` first — `crow::json::wvalue::list()` doesn't exist in this version, so the
+  injuries array is built via the `wvalue(std::vector<wvalue>)` constructor, which makes an **empty
+  list serialize as `[]`** (not `null`). `.b()` bool accessor and `<int>`→`int64_t` route param
+  confirmed present.
+- **Verified:** `ctest` **122/122** (was 94) with Postgres up; **live-verified** via curl —
+  create 201 → list → bad-severity 422 → PATCH active=false 200 → DELETE 204 → empty list `[]` →
+  no-token 401. Test user + injuries cleaned up (FK cascade).
+- Next: Stage C (`#25` frontend — profile + injuries forms, first React Hook Form + Zod). Then
+  merge `slice-2-profile` → `main`.
+
+## 2026-07-25 — VS Code
+- **Started Phase 2 Slice 2 (Profile & Injuries).** Brainstormed the whole-slice design and locked
+  8 decisions (`docs/superpowers/specs/2026-07-17-slice-2-profile-injuries-design.md`): expand
+  `domain::User` (not a separate entity), load-modify-save for `PATCH`, no null-clearing in v1,
+  **defer `preferences`** until its consumer (recommender) exists, one cohesive `InjuryService`,
+  keep `/auth/me` and `/users/me` distinct, domain-level validation, RFC 9457 field errors.
+  Wrote a bite-sized TDD plan for Stage A (`docs/superpowers/plans/2026-07-17-slice-2a-profile-backend.md`).
+- **Completed Stage A — `#19` `GET`/`PATCH /users/me`**, on branch `slice-2-profile`, 5 commits,
+  red→green→commit each: A1 grew `domain::User` + `ProfilePolicy` validator (12 tests); A2
+  extended `PgUserRepository` to map/persist all profile columns (NULL↔`std::optional`) + fake
+  round-trip; A3 `app::UpdateProfile` (load-modify-save, guard-validate before persist); A4
+  `ProfileDto` + new `UserController` (GET/PATCH on one Crow multi-method route, RFC 9457 field
+  errors); A5 wired `main.cpp`. **No migration** — Slice 0 already built every column.
+- Key decision realized in code: biometrics are **optional/NULL-able** (never forced), but any
+  provided value is **hard-rejected** server-side if out of range (weight (0,500], height (0,300],
+  etc.) — the client's future Zod schema will surface the same limits as a friendly "please check"
+  hint. Server enforces, client guides.
+- **Verified, not just claimed:** `ctest` **94/94** (was 70) with Postgres up so DB integration
+  tests ran; **live-verified** via curl against the real server + Postgres (register → GET metric
+  default → PATCH → GET persisted → invalid 422 → no-token 401), test user cleaned up.
+- Next: Stage B (`#20` injuries CRUD) — write its own plan then execute; then Stage C (`#25` FE
+  forms, first RHF+Zod). Branch `slice-2-profile` stays open until the slice is done.
+
 ## 2026-07-16 — VS Code (2)
 - **Finished `#24` — Slice 1 (Auth) is now fully complete** (`#16`, `#17`, `#18`, `#24` all done).
   Built the Client auth UI, mirroring the backend's TDD rhythm onto Vitest + Testing Library +

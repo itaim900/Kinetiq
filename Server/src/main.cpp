@@ -9,10 +9,16 @@
 
 #include "adapters/crypto/Argon2PasswordHasher.h"
 #include "adapters/crypto/JwtTokenService.h"
+#include "adapters/db/AutoCommitPgCatalogRepository.h"
+#include "adapters/db/AutoCommitPgInjuryRepository.h"
+#include "adapters/db/AutoCommitPgProfileHistoryRepository.h"
 #include "adapters/db/AutoCommitPgUserRepository.h"
 #include "adapters/db/Migrator.h"
 #include "config/Env.h"
 #include "http/controllers/AuthController.h"
+#include "http/controllers/CatalogController.h"
+#include "http/controllers/InjuryController.h"
+#include "http/controllers/UserController.h"
 
 namespace {
 
@@ -94,14 +100,20 @@ int main() {
     }
 
     kinetiq::db::AutoCommitPgUserRepository users(buildConnString());
+    kinetiq::db::AutoCommitPgProfileHistoryRepository history(buildConnString());
+    kinetiq::db::AutoCommitPgInjuryRepository injuries(buildConnString());
+    kinetiq::db::AutoCommitPgCatalogRepository catalog(buildConnString());
     kinetiq::crypto::Argon2PasswordHasher hasher;
     kinetiq::crypto::JwtTokenService tokens(jwtSecret, std::chrono::hours(24));
     kinetiq::http::registerAuthRoutes(app, users, hasher, tokens);
+    kinetiq::http::registerUserRoutes(app, users, history, tokens);
+    kinetiq::http::registerInjuryRoutes(app, injuries, catalog, tokens);
+    kinetiq::http::registerCatalogRoutes(app, catalog, tokens);
 
     // Bind to 127.0.0.1 by default (safe for local dev). In containers set
     // BIND_ADDR=0.0.0.0 so other containers (e.g. the frontend) can reach it.
     const std::string bindAddr = kinetiq::envOr("BIND_ADDR", "127.0.0.1");
-    CROW_LOG_INFO << "KinetiQ backend listening on http://" << bindAddr << ":8080";
+    CROW_LOG_INFO << "Kinetiq backend listening on http://" << bindAddr << ":8080";
     app.bindaddr(bindAddr).port(8080).multithreaded().run();
     return 0;
 }

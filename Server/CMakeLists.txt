@@ -18,7 +18,7 @@ if(KINETIQ_FETCH_LIBPQXX)
     set(SKIP_BUILD_TEST ON CACHE BOOL "" FORCE)  # don't build libpqxx's own test suite
     FetchContent_Declare(libpqxx
         GIT_REPOSITORY https://github.com/jtv/libpqxx.git
-        GIT_TAG 7.9.2
+        GIT_TAG 7.10.1   # keep in sync with local MSYS2 libpqxx (pacman -Q mingw-w64-ucrt-x86_64-libpqxx)
         GIT_SHALLOW TRUE)
     FetchContent_MakeAvailable(libpqxx)
     add_library(kinetiq_pqxx INTERFACE)
@@ -64,9 +64,18 @@ add_executable(kinetiq_server
     src/adapters/db/Migrator.cpp
     src/adapters/db/PgUserRepository.cpp
     src/adapters/db/AutoCommitPgUserRepository.cpp
+    src/adapters/db/PgInjuryRepository.cpp
+    src/adapters/db/AutoCommitPgInjuryRepository.cpp
+    src/adapters/db/PgCatalogRepository.cpp
+    src/adapters/db/AutoCommitPgCatalogRepository.cpp
+    src/adapters/db/PgProfileHistoryRepository.cpp
+    src/adapters/db/AutoCommitPgProfileHistoryRepository.cpp
     src/adapters/crypto/Argon2PasswordHasher.cpp
     src/adapters/crypto/JwtTokenService.cpp
-    src/http/controllers/AuthController.cpp)
+    src/http/controllers/AuthController.cpp
+    src/http/controllers/UserController.cpp
+    src/http/controllers/InjuryController.cpp
+    src/http/controllers/CatalogController.cpp)
 target_include_directories(kinetiq_server PRIVATE
     src
     ${CMAKE_SOURCE_DIR}/third_party/crow)
@@ -95,6 +104,11 @@ if(KINETIQ_BUILD_TESTS)
         tests/test_migrations.cpp
         tests/test_http_harness.cpp
         tests/test_password_policy.cpp
+        tests/test_profile_policy.cpp
+        tests/test_injury_policy.cpp
+        tests/test_injury_repository.cpp
+        tests/test_catalog_repository.cpp
+        tests/test_injury_service.cpp
         tests/test_user_repository.cpp
         tests/test_pg_user_repository.cpp
         tests/test_password_hasher.cpp
@@ -103,15 +117,34 @@ if(KINETIQ_BUILD_TESTS)
         tests/test_register_user.cpp
         tests/test_login_user.cpp
         tests/test_change_password.cpp
+        tests/test_update_profile.cpp
         tests/test_auth_controller.cpp
+        tests/test_user_controller.cpp
+        tests/test_injury_controller.cpp
+        tests/test_catalog_controller.cpp
         tests/test_auto_commit_pg_user_repository.cpp
+        tests/test_pg_injury_repository.cpp
+        tests/test_auto_commit_pg_injury_repository.cpp
+        tests/test_pg_catalog_repository.cpp
+        tests/test_auto_commit_pg_catalog_repository.cpp
+        tests/test_pg_profile_history_repository.cpp
+        tests/test_auto_commit_pg_profile_history_repository.cpp
         tests/support/TestDb.cpp
         src/adapters/db/Migrator.cpp
         src/adapters/db/PgUserRepository.cpp
         src/adapters/db/AutoCommitPgUserRepository.cpp
+        src/adapters/db/PgInjuryRepository.cpp
+        src/adapters/db/AutoCommitPgInjuryRepository.cpp
+        src/adapters/db/PgCatalogRepository.cpp
+        src/adapters/db/AutoCommitPgCatalogRepository.cpp
+        src/adapters/db/PgProfileHistoryRepository.cpp
+        src/adapters/db/AutoCommitPgProfileHistoryRepository.cpp
         src/adapters/crypto/Argon2PasswordHasher.cpp
         src/adapters/crypto/JwtTokenService.cpp
-        src/http/controllers/AuthController.cpp)
+        src/http/controllers/AuthController.cpp
+        src/http/controllers/UserController.cpp
+        src/http/controllers/InjuryController.cpp
+        src/http/controllers/CatalogController.cpp)
     target_include_directories(kinetiq_tests PRIVATE
         src tests
         ${CMAKE_SOURCE_DIR}/third_party/crow)  # Crow for the in-process HTTP harness

@@ -1,4 +1,4 @@
-# Roadmap & Milestones — KinetiQ
+# Roadmap & Milestones — Kinetiq
 
 **Status:** Approved (design phase)
 **Last updated:** 2026-06-24
@@ -122,6 +122,6 @@ where data allows; every AI call is audited; the full flow is demoable and teste
 ## How to use this with GitHub
 
 - Each phase is a **Milestone**; each deliverable is an **Issue** under it.
-- Track progress on the [Issues](https://github.com/itaim900/KinetiQ/issues) and
-  [Milestones](https://github.com/itaim900/KinetiQ/milestones) pages.
+- Track progress on the [Issues](https://github.com/itaim900/Kinetiq/issues) and
+  [Milestones](https://github.com/itaim900/Kinetiq/milestones) pages.
 - Recommended flow: one branch per issue → PR → review → merge → close issue.
