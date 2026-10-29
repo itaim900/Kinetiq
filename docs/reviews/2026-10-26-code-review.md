@@ -142,10 +142,116 @@ contract tests that run the client's API functions against the real server in CI
 - `Migrator` has no advisory lock — two servers starting at once could both apply a migration
   (we only run one).
 
-## Suggested order
-1. **#1 + #7 + #2** together — a typed JSON-reading helper with field-named errors, and honest
-   500s. This is the core of "data transport hardening".
-2. **#3 + #6 + #10** — complete the validation rules on the server, mirrored in Zod.
-3. **#4 + #5** — make the wire format match storage and the docs (rounding, ISO timestamps).
+---
+
+# Part 2 — full server review, file by file (2026-10-29)
+
+**Scope:** every file under `Server/src` (domain, ports, app, adapters, http, `main.cpp`, config),
+plus `Server/migrations`, `Server/tests/support` and `docker-compose.prod.yml`. Findings 1–13 above
+still stand; these are new.
+
+## What's good, server-wide
+- **The architecture holds:** no file in `domain/`, `ports/` or `app/` includes Crow or libpqxx.
+  Every dependency points inward, exactly as the READMEs promise.
+- **No SQL injection anywhere:** every query uses `$1`-style parameters (`pqxx::params`); the one
+  string-built query (`Migrator`) quotes its value.
+- **Crypto is done right:** argon2id with a random OpenSSL salt and parameters embedded in the hash;
+  JWT verification pins HS256 (no `alg: none` trick), checks the issuer and expiry, and never throws.
+- **Privacy rules are enforced in one place each:** `password_hash` is never serialized; the user id
+  always comes from the token; someone else's injury is a 404, never a 403.
+- **Fail-closed startup:** a broken migration stops the server instead of serving a half-built schema.
+- **Comments explain *why*,** not just what — a big help for a learning project.
+
+## New findings
+
+### 🔴 14. The production compose file doesn't set `JWT_SECRET`
+`docker-compose.prod.yml` sets the DB variables but not `JWT_SECRET`, so the containerized stack
+signs logins with the fallback `"dev-only-insecure-secret-change-in-production"`, which is public in
+this repository. Anyone who reads `main.cpp` can forge a valid token for **any user id**. The only
+signal is a warning line in the server log.
+**Fix:** `JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}` in the prod compose (compose refuses to start
+without it); in the server, refuse to start with the fallback unless running locally
+(`BIND_ADDR=127.0.0.1`), and reject secrets shorter than 32 characters.
+
+### 🟠 15. The same failure gets different answers depending on the route (sharpens #2)
+Crow already turns an **uncaught** exception into `500` + an error log. Routes **without** a
+`try` (`GET /users/me/injuries`, the three catalog routes, `GET /auth/me`, `GET /users/me`) get that
+honest 500 when Postgres is down. Routes **with** the `catch (std::exception&)` (register, login,
+PATCH profile, POST/PATCH/DELETE injury) turn the very same outage into
+`422 "fields are missing or invalid"`, with no log.
+**Fix (part of #2):** once parsing throws typed, field-named errors (#1/#7), delete the catch-alls
+and let Crow's 500 handler (or one shared handler) deal with the unexpected.
+
+### 🟠 16. Old logins stay valid after a password change
+JWTs are stateless: `ChangePassword` doesn't touch existing tokens, so a stolen token keeps working
+for up to 24 h even after the user changes their password. Usually that's the whole point of
+changing it.
+**Fix:** for v1, document it as a known limitation in `02-api-contract.md`. Properly: a
+`password_changed_at` (or `token_version`) column checked in `authenticate()` (one DB read per
+request), or short-lived access tokens + refresh tokens (backlog, with "forgot password").
+
+### 🟠 17. No limits on expensive or large requests
+- **Login/register have no rate limit:** unlimited password guessing per account.
+- **Each hash costs 64 MiB of RAM** (argon2 memory cost). Crow runs one thread per CPU core, so a
+  burst of logins can use hundreds of MB on this 8 GB machine.
+- **No password length cap** (argon2 accepts megabytes) and **no request-body cap** in Crow
+  (`nginx` in the prod stack defaults to 1 MB, but port 8080 is exposed directly too).
+**Fix now (cheap):** a maximum password length (e.g. 128) in `PasswordPolicy`, and a body-size check
+before `json::load`. **Later (backlog):** rate limiting per IP / per email.
+
+### 🟡 18. Dates come out in whatever format Postgres is set to (extends #5)
+`birth_date` and `created_at` are read with `as<std::string>()`, so their text depends on the DB
+session's `DateStyle` setting. It's ISO-like by default, so fine today, but it's an invisible
+dependency.
+**Fix (with #5):** format dates explicitly in SQL (`to_char(...)`) in one shared place.
+
+### 🟡 19. The birth-date parser also accepts odd shapes (extends #6)
+`sscanf("%2d")` accepts a sign or a space, so `"2001-+1-05"` passes the server check (then Postgres
+rejects it → the generic 422 from #2).
+**Fix (with #6):** parse digits strictly, then check the real calendar.
+
+### 🟡 20. Unknown or misspelled fields are silently ignored
+`PATCH /users/me {"weigth_kg": 80}` (typo) answers `200 OK` and changes nothing; the client thinks
+it saved.
+**Fix:** reject unknown keys with a field-named 422 (`"weigth_kg": ["unknown field"]`), at least on
+PATCH bodies.
+
+### 🟡 21. A few value limits are missing (extends #3)
+- `weekly_workout_goal` and `available_time_minutes` have no upper bound (2,000,000,000 is accepted).
+- `user_injuries.severity` is nullable in the schema but required in code; `rowToInjury` turns a
+  NULL into `""`, which would then fail validation the next time that injury is edited.
+**Fix:** sensible maximums (e.g. ≤ 14 workouts/week, ≤ 600 minutes) in `ProfilePolicy` + Zod, and a
+new migration adding the matching `CHECK`s and `severity NOT NULL`.
+
+### 🟡 22. Profile history stores unrounded values (part of #4)
+History records the in-memory value (`72.456`) while the users table keeps the rounded `72.46`, so
+history and profile disagree. Fixed automatically by rounding in the domain (#4).
+
+### 🟡 23. `Migrator` doesn't notice an edited migration
+An already-applied file that was changed later is silently skipped (only its name is recorded).
+**Fix later:** store a checksum per migration and refuse to start on a mismatch (backlog).
+
+### 🟡 24. Fakes and real adapters can drift apart
+`InMemoryInjuryRepository` invents an ISO `createdAt` (Postgres doesn't produce one, see #5);
+`InMemoryUserRepository::update` never throws `DuplicateEmailError` (Postgres does). The "same
+contract" is written twice, once in the fake tests and once in the Pg tests.
+**Fix later:** one shared contract test suite (GoogleTest `TYPED_TEST`) run against both the fake
+and the real adapter (backlog, pairs with #12).
+
+### 🟡 25. Small items
+- The `Bearer` prefix check is case-sensitive (the HTTP spec says the scheme name isn't).
+- `/health` is public, opens a new DB connection on every call, and sends `CORS: *`.
+- Port `8080` is hard-coded (everything else comes from env vars).
+- `PATCH /auth/password` answers `200` with an empty body (`204 No Content` says that more precisely).
+- Repository `update()` silently does nothing for a missing id (the services check first, so it's
+  only reachable in a race).
+
+## Suggested order (updated)
+0. **#14** — tiny, and it's a security hole: do it first.
+1. **#1 + #7 + #2 + #15 + #20** — typed JSON reading with field-named errors, reject unknown
+   fields, honest 500s. The core of "data transport hardening".
+2. **#3 + #21 + #6 + #19 + #10 + #17 (caps only)** — complete the validation rules on the server,
+   mirrored in Zod, plus password and body-size caps.
+3. **#4 + #22 + #5 + #18** — the wire format matches storage and the docs (rounding, ISO dates).
 4. **#8 + #9** — tidy the error plumbing on both sides.
-5. **#11 + #12 + #13** → backlog.
+5. **Backlog:** #11, #12, #13, #16 (document now), #17 (rate limiting), #23, #24, #25.
