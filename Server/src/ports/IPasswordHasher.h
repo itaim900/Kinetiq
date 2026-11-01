@@ -1,5 +1,7 @@
 #pragma once
 
+#include "domain/PasswordHash.h"
+
 #include <string>
 
 namespace kinetiq::ports {
@@ -14,10 +16,11 @@ public:
 
     // Returns a self-contained encoded hash (algorithm params + salt + hash
     // all embedded) -- safe to store directly in Users.password_hash.
-    virtual std::string hash(const std::string& password) = 0;
+    virtual kinetiq::domain::PasswordHash hash(const std::string& password) = 0;
 
     // True if `password`, when hashed, matches `hash`.
-    virtual bool verify(const std::string& hash, const std::string& password) = 0;
+    virtual bool verify(const kinetiq::domain::PasswordHash& hash,
+                        const std::string& password) = 0;
 };
 
 }  // namespace kinetiq::ports

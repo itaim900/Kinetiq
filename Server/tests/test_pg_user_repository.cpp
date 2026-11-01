@@ -21,7 +21,7 @@ TEST_F(DbTest, PgUserRepository_SaveThenFindByEmail_ReturnsUser) {
     PgUserRepository repo(tx());
     User user;
     user.email = "pg-alice@example.com";
-    user.passwordHash = "hashed";
+    user.passwordHash = kinetiq::domain::PasswordHash("hashed");
     user.displayName = "Alice";
 
     const User saved = repo.save(user);
@@ -31,7 +31,7 @@ TEST_F(DbTest, PgUserRepository_SaveThenFindByEmail_ReturnsUser) {
     ASSERT_TRUE(found.has_value());
     EXPECT_EQ(found->id, saved.id);
     EXPECT_EQ(found->displayName, "Alice");
-    EXPECT_EQ(found->passwordHash, "hashed");
+    EXPECT_EQ(found->passwordHash.encoded(), "hashed");
 }
 
 TEST_F(DbTest, PgUserRepository_FindByEmail_UnknownEmail_ReturnsNullopt) {
@@ -49,7 +49,7 @@ TEST_F(DbTest, PgUserRepository_FindByEmail_IsCaseInsensitive) {
     PgUserRepository repo(tx());
     User user;
     user.email = "Pg-Bob@Example.com";
-    user.passwordHash = "hashed";
+    user.passwordHash = kinetiq::domain::PasswordHash("hashed");
     repo.save(user);
 
     EXPECT_TRUE(repo.findByEmail("pg-bob@example.com").has_value());
@@ -62,12 +62,12 @@ TEST_F(DbTest, PgUserRepository_Save_DuplicateEmailCaseInsensitive_Throws) {
     PgUserRepository repo(tx());
     User first;
     first.email = "pg-carol@example.com";
-    first.passwordHash = "hashed";
+    first.passwordHash = kinetiq::domain::PasswordHash("hashed");
     repo.save(first);
 
     User second;
     second.email = "PG-CAROL@EXAMPLE.COM";
-    second.passwordHash = "hashed2";
+    second.passwordHash = kinetiq::domain::PasswordHash("hashed2");
     EXPECT_THROW(repo.save(second), DuplicateEmailError);
 }
 
@@ -77,10 +77,10 @@ TEST_F(DbTest, PgUserRepository_Save_AssignsDistinctIncrementingIds) {
     PgUserRepository repo(tx());
     User a;
     a.email = "pg-dan@example.com";
-    a.passwordHash = "x";
+    a.passwordHash = kinetiq::domain::PasswordHash("x");
     User b;
     b.email = "pg-erin@example.com";
-    b.passwordHash = "x";
+    b.passwordHash = kinetiq::domain::PasswordHash("x");
 
     const User savedA = repo.save(a);
     const User savedB = repo.save(b);
@@ -95,7 +95,7 @@ TEST_F(DbTest, PgUserRepository_FindById_ReturnsUser) {
     PgUserRepository repo(tx());
     User user;
     user.email = "pg-frank@example.com";
-    user.passwordHash = "hashed";
+    user.passwordHash = kinetiq::domain::PasswordHash("hashed");
     user.displayName = "Frank";
     const User saved = repo.save(user);
 
@@ -119,16 +119,16 @@ TEST_F(DbTest, PgUserRepository_Update_ChangesStoredFields) {
     PgUserRepository repo(tx());
     User user;
     user.email = "pg-grace@example.com";
-    user.passwordHash = "old-hash";
+    user.passwordHash = kinetiq::domain::PasswordHash("old-hash");
     const User saved = repo.save(user);
 
     User modified = saved;
-    modified.passwordHash = "new-hash";
+    modified.passwordHash = kinetiq::domain::PasswordHash("new-hash");
     repo.update(modified);
 
     const auto found = repo.findById(saved.id);
     ASSERT_TRUE(found.has_value());
-    EXPECT_EQ(found->passwordHash, "new-hash");
+    EXPECT_EQ(found->passwordHash.encoded(), "new-hash");
 }
 
 // Slice 2 (#19): profile columns must round-trip through update() + findById().
@@ -138,7 +138,7 @@ TEST_F(DbTest, PgUserRepository_Update_PersistsProfileFields) {
     PgUserRepository repo(tx());
     User user;
     user.email = "pg-profile@example.com";
-    user.passwordHash = "hashed";
+    user.passwordHash = kinetiq::domain::PasswordHash("hashed");
     const User saved = repo.save(user);
 
     User modified = saved;
@@ -176,7 +176,7 @@ TEST_F(DbTest, PgUserRepository_FindById_NewUserHasEmptyProfile) {
     PgUserRepository repo(tx());
     User user;
     user.email = "pg-empty-profile@example.com";
-    user.passwordHash = "hashed";
+    user.passwordHash = kinetiq::domain::PasswordHash("hashed");
     const User saved = repo.save(user);
 
     const auto found = repo.findById(saved.id);

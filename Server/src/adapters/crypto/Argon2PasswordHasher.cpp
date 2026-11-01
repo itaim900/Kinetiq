@@ -23,7 +23,7 @@ constexpr size_t kHashLength = 32;
 
 }  // namespace
 
-std::string Argon2PasswordHasher::hash(const std::string& password) {
+kinetiq::domain::PasswordHash Argon2PasswordHasher::hash(const std::string& password) {
     std::vector<unsigned char> salt(kSaltLength);
     if (RAND_bytes(salt.data(), static_cast<int>(salt.size())) != 1) {
         throw std::runtime_error("Argon2PasswordHasher: failed to generate random salt");
@@ -45,11 +45,12 @@ std::string Argon2PasswordHasher::hash(const std::string& password) {
 
     // argon2id_hash_encoded null-terminates within the buffer; the buffer
     // itself may be longer than the actual encoded string.
-    return std::string(encoded.data(), std::strlen(encoded.data()));
+    return kinetiq::domain::PasswordHash(std::string(encoded.data(), std::strlen(encoded.data())));
 }
 
-bool Argon2PasswordHasher::verify(const std::string& hash, const std::string& password) {
-    return argon2id_verify(hash.c_str(), password.data(), password.size()) == ARGON2_OK;
+bool Argon2PasswordHasher::verify(const kinetiq::domain::PasswordHash& hash,
+                                  const std::string& password) {
+    return argon2id_verify(hash.encoded().c_str(), password.data(), password.size()) == ARGON2_OK;
 }
 
 }  // namespace kinetiq::crypto

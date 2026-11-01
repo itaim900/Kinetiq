@@ -38,7 +38,7 @@ TEST(RegisterUserTest, ValidRequest_CreatesUserAndReturnsToken) {
     EXPECT_FALSE(result.accessToken.empty());
 
     // The stored hash must never be the plaintext password.
-    EXPECT_NE(result.user.passwordHash, "StrongPass1");
+    EXPECT_NE(result.user.passwordHash.encoded(), "StrongPass1");
 
     // The issued token should verify back to exactly this user's id.
     const auto verifiedUserId = tokens.verify(result.accessToken);

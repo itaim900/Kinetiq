@@ -22,7 +22,7 @@ long long seedUser(pqxx::work& tx, const std::string& email) {
     PgUserRepository users(tx);
     User u;
     u.email = email;
-    u.passwordHash = "x";
+    u.passwordHash = kinetiq::domain::PasswordHash("x");
     return users.save(u).id;
 }
 

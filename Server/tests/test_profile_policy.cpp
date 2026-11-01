@@ -17,7 +17,7 @@ namespace {
 User validProfile() {
     User u;
     u.email = "v@example.com";
-    u.passwordHash = "x";
+    u.passwordHash = kinetiq::domain::PasswordHash("x");
     u.sex = "female";
     u.birthDate = "1990-05-15";
     u.heightCm = 170.0;
@@ -39,7 +39,7 @@ TEST(ProfilePolicy, EmptyProfile_DoesNotThrow) {
     // All optionals unset, unitPreference at its default -- nothing to reject.
     User u;
     u.email = "e@example.com";
-    u.passwordHash = "x";
+    u.passwordHash = kinetiq::domain::PasswordHash("x");
     EXPECT_NO_THROW(requireValidProfile(u));
 }
 

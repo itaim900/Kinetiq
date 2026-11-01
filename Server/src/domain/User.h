@@ -1,5 +1,7 @@
 #pragma once
 
+#include "domain/PasswordHash.h"
+
 #include <optional>
 #include <string>
 
@@ -12,7 +14,7 @@ namespace kinetiq::domain {
 struct User {
     long long id = 0;
     std::string email;
-    std::string passwordHash;
+    PasswordHash passwordHash;  // never the password itself
     std::string displayName;
 
     // --- profile (Slice 2) ---
