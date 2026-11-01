@@ -117,3 +117,78 @@ TEST(ProfilePolicy, MalformedBirthDate_Throws_FieldIsBirthDate) {
         EXPECT_EQ(e.field(), "birth_date");
     }
 }
+
+// Domain review fixes (spec 2026-11-01): realistic upper limits and a real
+// calendar check for birth dates.
+namespace {
+
+bool profileValidWith(void (*change)(User&)) {
+    User u = validProfile();
+    change(u);
+    try {
+        requireValidProfile(u);
+        return true;
+    } catch (const ProfileValidationError&) {
+        return false;
+    }
+}
+
+bool birthDateOk(const std::string& date) {
+    User u = validProfile();
+    u.birthDate = date;
+    try {
+        requireValidProfile(u);
+        return true;
+    } catch (const ProfileValidationError&) {
+        return false;
+    }
+}
+
+}  // namespace
+
+TEST(ProfilePolicy, WeeklyGoal_0To21) {
+    EXPECT_TRUE(profileValidWith([](User& u) { u.weeklyWorkoutGoal = 0; }));
+    EXPECT_TRUE(profileValidWith([](User& u) { u.weeklyWorkoutGoal = 21; }));  // 3 a day x 7
+    EXPECT_FALSE(profileValidWith([](User& u) { u.weeklyWorkoutGoal = 22; }));
+}
+
+TEST(ProfilePolicy, AvailableTime_1To300) {
+    EXPECT_TRUE(profileValidWith([](User& u) { u.availableTimeMinutes = 1; }));
+    EXPECT_TRUE(profileValidWith([](User& u) { u.availableTimeMinutes = 300; }));  // 5 hours
+    EXPECT_FALSE(profileValidWith([](User& u) { u.availableTimeMinutes = 301; }));
+}
+
+TEST(ProfilePolicy, LimitMessagesNameTheRange) {
+    User u = validProfile();
+    u.weeklyWorkoutGoal = 22;
+    try {
+        requireValidProfile(u);
+        FAIL() << "expected ProfileValidationError";
+    } catch (const ProfileValidationError& e) {
+        EXPECT_STREQ(e.what(), "weekly_workout_goal must be between 0 and 21");
+    }
+
+    u = validProfile();
+    u.availableTimeMinutes = 301;
+    try {
+        requireValidProfile(u);
+        FAIL() << "expected ProfileValidationError";
+    } catch (const ProfileValidationError& e) {
+        EXPECT_STREQ(e.what(), "available_time_minutes must be between 1 and 300");
+    }
+}
+
+TEST(ProfilePolicy, BirthDate_MustBeARealCalendarDate) {
+    EXPECT_TRUE(birthDateOk("2000-02-29"));   // divisible by 400 -> leap year
+    EXPECT_TRUE(birthDateOk("2024-02-29"));   // divisible by 4 -> leap year
+    EXPECT_TRUE(birthDateOk("2001-12-31"));
+    EXPECT_FALSE(birthDateOk("1900-02-29"));  // century not divisible by 400 -> not leap
+    EXPECT_FALSE(birthDateOk("2023-02-29"));
+    EXPECT_FALSE(birthDateOk("2001-02-31"));
+    EXPECT_FALSE(birthDateOk("2001-04-31"));  // April has 30 days
+    EXPECT_FALSE(birthDateOk("2001-13-01"));
+    EXPECT_FALSE(birthDateOk("2001-00-10"));
+    EXPECT_FALSE(birthDateOk("2001-+1-05"));  // a sign sneaking in
+    EXPECT_FALSE(birthDateOk("2001-1 -05"));  // a space sneaking in
+    EXPECT_FALSE(birthDateOk("1899-12-31"));
+}
