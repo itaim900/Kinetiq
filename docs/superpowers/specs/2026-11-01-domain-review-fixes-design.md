@@ -94,6 +94,23 @@ and the server refuses to start — the intended fail-closed behaviour). `birth_
   `available_time_minutes = 301` directly violates a `CHECK`.
 - Client `profileSchema` / `ProfileForm` tests: 22 workouts and 301 minutes show the new messages.
 
+## 6. Addendum (owner request, 2026-11-01): password hashing hardening
+From the ports review.
+- **`domain::PasswordHash` strong type** (`domain/PasswordHash.h`): wraps the encoded hash string;
+  `explicit` constructor, `encoded()` accessor, `==`. `User::passwordHash` and `IPasswordHasher`
+  (`PasswordHash hash(const std::string&)`, `bool verify(const PasswordHash&, const std::string&)`)
+  use it, so `verify(password, hash)` (swapped) no longer compiles. Adapters unwrap with
+  `encoded()` only at the DB / argon2 boundary.
+- **Timing-leak fix:** `IPasswordHasher` gains `const PasswordHash& dummyHash()` — a valid hash of
+  a fixed secret, computed once. `LoginUser` always runs exactly one `verify` (against the user's
+  hash, or the dummy hash when the email is unknown), so both failure paths cost the same.
+  `main.cpp` computes the dummy hash at startup.
+- **`FakePasswordHasher`** (`tests/support/`): `hash(pw)` = `"fake$" + pw`, counts calls. Replaces
+  argon2 in every service and controller test; only `test_password_hasher.cpp` (and the Slice 0
+  smoke test) keep the real adapter.
+- **Backlog note:** profile history should record *who* made a change (user / AI / admin) once
+  anyone but the user can edit a profile.
+
 ## Out of scope
 Length limits on notes / display name / email, the email format check, strict JSON number parsing,
 honest 500s — all remain in the data-transport hardening pass (review findings #1–#10).
