@@ -105,6 +105,7 @@ if(KINETIQ_BUILD_TESTS)
         tests/test_http_harness.cpp
         tests/test_password_policy.cpp
         tests/test_profile_policy.cpp
+        tests/test_validation_error.cpp
         tests/test_injury_policy.cpp
         tests/test_injury_repository.cpp
         tests/test_catalog_repository.cpp

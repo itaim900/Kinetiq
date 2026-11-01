@@ -1,25 +1,19 @@
 #pragma once
 
 #include "domain/User.h"
+#include "domain/ValidationError.h"
 
 #include <cstdio>
 #include <initializer_list>
-#include <stdexcept>
 #include <string>
 
 namespace kinetiq::domain {
 
-// Thrown when a profile field is invalid. Carries the offending field's
-// wire name (e.g. "weight_kg") so the HTTP layer can build the RFC 9457
-// `errors: { field: [...] }` object.
-class ProfileValidationError : public std::runtime_error {
+// Thrown when a profile field is invalid (field name + message come from the
+// ValidationError base; `using` reuses its constructor).
+class ProfileValidationError : public ValidationError {
 public:
-    ProfileValidationError(std::string field, const std::string& message)
-        : std::runtime_error(message), field_(std::move(field)) {}
-    const std::string& field() const { return field_; }
-
-private:
-    std::string field_;
+    using ValidationError::ValidationError;
 };
 
 namespace detail {
