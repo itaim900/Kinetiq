@@ -24,7 +24,7 @@ describe('registerUser', () => {
             type: 'validation_error',
             title: 'Validation Failed',
             status: 422,
-            detail: 'Password does not meet the strength policy.',
+            detail: 'password must be at least 8 characters and include an uppercase letter',
           },
           { status: 422 },
         ),
@@ -33,7 +33,7 @@ describe('registerUser', () => {
 
     await expect(
       registerUser({ email: 'bob@example.com', password: 'weak', display_name: 'Bob' }),
-    ).rejects.toThrow('Password does not meet the strength policy.');
+    ).rejects.toThrow('password must be at least 8 characters and include an uppercase letter');
   });
 
   it('throws the backend detail message on a duplicate email (409)', async () => {

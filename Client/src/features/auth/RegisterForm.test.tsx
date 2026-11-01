@@ -32,7 +32,7 @@ describe('RegisterForm', () => {
     server.use(
       http.post('/api/v1/auth/register', () =>
         HttpResponse.json(
-          { detail: 'Password does not meet the strength policy.' },
+          { detail: 'password must be at least 8 characters and include an uppercase letter' },
           { status: 422 },
         ),
       ),
@@ -42,7 +42,7 @@ describe('RegisterForm', () => {
     fillAndSubmit('eve@example.com', 'weak', 'Eve');
 
     expect(
-      await screen.findByText('Password does not meet the strength policy.'),
+      await screen.findByText('password must be at least 8 characters and include an uppercase letter'),
     ).toBeInTheDocument();
   });
 
