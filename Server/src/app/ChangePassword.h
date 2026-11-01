@@ -30,7 +30,7 @@ public:
     // the current password is wrong (reusing LoginUser's error type: same
     // "don't leak more than necessary" principle).
     void execute(const ChangePasswordRequest& request) {
-        kinetiq::domain::requireStrongPassword(request.newPassword);
+        kinetiq::domain::requireStrongPassword(request.newPassword, "new_password");
 
         const auto found = users_.findById(request.userId);
         if (!found.has_value() || !hasher_.verify(found->passwordHash, request.currentPassword)) {

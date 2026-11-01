@@ -4,6 +4,7 @@
 #include "app/LoginUser.h"
 #include "app/RegisterUser.h"
 #include "http/dto/AuthDto.h"
+#include "http/dto/ProfileDto.h"  // dto::validationErrorResponse
 #include "http/middleware/Authenticator.h"
 
 namespace kinetiq::http {
@@ -24,9 +25,10 @@ void registerAuthRoutes(crow::SimpleApp& app, kinetiq::ports::IUserRepository& u
                 const auto result = registerUser.execute(dto::parseRegisterRequest(body));
                 auto json = dto::authResultToJson(result.user, result.accessToken);
                 return crow::response(201, json);
-            } catch (const kinetiq::domain::WeakPasswordError&) {
-                return dto::errorResponse(422, "validation_error", "Validation Failed",
-                                           "Password does not meet the strength policy.");
+            } catch (const kinetiq::domain::WeakPasswordError& e) {
+                // Field-named 422; detail = the same sentence (the register
+                // screen shows detail).
+                return dto::validationErrorResponse(e.field(), e.what(), e.what());
             } catch (const kinetiq::ports::DuplicateEmailError&) {
                 return dto::errorResponse(409, "conflict", "Conflict",
                                            "Email is already registered.");
@@ -103,9 +105,8 @@ void registerAuthRoutes(crow::SimpleApp& app, kinetiq::ports::IUserRepository& u
                     changePassword.execute(
                         dto::parseChangePasswordRequest(body, currentUser->userId));
                     return crow::response(200);
-                } catch (const kinetiq::domain::WeakPasswordError&) {
-                    return dto::errorResponse(422, "validation_error", "Validation Failed",
-                                               "New password does not meet the strength policy.");
+                } catch (const kinetiq::domain::WeakPasswordError& e) {
+                    return dto::validationErrorResponse(e.field(), e.what(), e.what());
                 } catch (const kinetiq::app::InvalidCredentialsError&) {
                     return dto::errorResponse(401, "invalid_credentials", "Unauthorized",
                                                "Current password is incorrect.");

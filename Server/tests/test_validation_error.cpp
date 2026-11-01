@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 
 #include "domain/InjuryPolicy.h"
+#include "domain/PasswordPolicy.h"
 #include "domain/ProfilePolicy.h"
 #include "domain/ValidationError.h"
 
@@ -13,6 +14,7 @@
 using kinetiq::domain::InjuryValidationError;
 using kinetiq::domain::ProfileValidationError;
 using kinetiq::domain::ValidationError;
+using kinetiq::domain::WeakPasswordError;
 
 namespace {
 
@@ -32,6 +34,7 @@ TEST(ValidationError, BaseCatchesInjuryAndProfileErrors) {
     EXPECT_EQ(fieldCaughtAsBase([] { throw InjuryValidationError("severity", "bad"); }), "severity");
     EXPECT_EQ(fieldCaughtAsBase([] { throw ProfileValidationError("weight_kg", "bad"); }),
               "weight_kg");
+    EXPECT_EQ(fieldCaughtAsBase([] { throw WeakPasswordError("password", "bad"); }), "password");
 }
 
 TEST(ValidationError, KeepsTheMessage) {

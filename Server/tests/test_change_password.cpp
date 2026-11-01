@@ -76,3 +76,19 @@ TEST(ChangePasswordTest, WeakNewPassword_ThrowsAndLeavesPasswordUnchanged) {
     ASSERT_TRUE(stillOld.has_value());
     EXPECT_TRUE(hasher.verify(stillOld->passwordHash, "OldPass1"));
 }
+
+// The 422 must point at the new password's field, not the register form's.
+TEST(ChangePasswordTest, WeakNewPassword_ErrorNamesNewPasswordField) {
+    InMemoryUserRepository users;
+    Argon2PasswordHasher hasher;
+    ChangePassword changePassword(users, hasher);
+
+    const User seeded = seedUser(users, hasher, "kim@example.com", "OldPass1");
+
+    try {
+        changePassword.execute({seeded.id, "OldPass1", "weak"});
+        FAIL() << "expected WeakPasswordError";
+    } catch (const kinetiq::domain::WeakPasswordError& e) {
+        EXPECT_EQ(e.field(), "new_password");
+    }
+}

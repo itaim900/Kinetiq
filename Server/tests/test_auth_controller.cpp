@@ -55,6 +55,35 @@ TEST(AuthControllerTest, Register_WeakPassword_Returns422) {
 
     EXPECT_EQ(r.code, 422);
     EXPECT_FALSE(users.findByEmail("leo@example.com").has_value());
+
+    // The 422 names the field, and `detail` is the specific sentence the
+    // register screen shows.
+    const auto body = crow::json::load(r.body);
+    ASSERT_TRUE(body);
+    const std::string expected =
+        "password must be at least 8 characters and include an uppercase letter";
+    EXPECT_EQ(std::string(body["errors"]["password"][0].s()), expected);
+    EXPECT_EQ(std::string(body["detail"].s()), expected);
+}
+
+TEST(AuthControllerTest, Register_TooLongPassword_Returns422NamingPassword) {
+    crow::SimpleApp app;
+    InMemoryUserRepository users;
+    Argon2PasswordHasher hasher;
+    JwtTokenService tokens("test-secret", std::chrono::seconds(3600));
+    kinetiq::http::registerAuthRoutes(app, users, hasher, tokens);
+    kinetiq::testing::HttpClient client(app);
+
+    const std::string tooLong(65, 'A');
+    const auto r = client.post(
+        "/api/v1/auth/register",
+        R"({"email":"long@example.com","password":")" + tooLong + R"(","display_name":"Long"})");
+
+    EXPECT_EQ(r.code, 422);
+    const auto body = crow::json::load(r.body);
+    ASSERT_TRUE(body);
+    EXPECT_EQ(std::string(body["errors"]["password"][0].s()),
+              "password must be at most 64 characters");
 }
 
 TEST(AuthControllerTest, Register_DuplicateEmail_Returns409) {
@@ -268,6 +297,9 @@ TEST(AuthControllerTest, ChangePassword_WeakNewPassword_Returns422) {
                                 R"({"current_password":"OldPass1","new_password":"weak"})",
                                 {{"Authorization", "Bearer " + token}});
     EXPECT_EQ(r.code, 422);
+    const auto body = crow::json::load(r.body);
+    ASSERT_TRUE(body);
+    EXPECT_TRUE(body["errors"].has("new_password"));
 }
 
 TEST(AuthControllerTest, ChangePassword_Unauthenticated_Returns401) {
