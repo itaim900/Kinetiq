@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 
-#include "adapters/crypto/Argon2PasswordHasher.h"
+#include "support/FakePasswordHasher.h"
 #include "app/ChangePassword.h"
 #include "app/LoginUser.h"
 #include "domain/PasswordPolicy.h"
@@ -14,13 +14,13 @@
 using kinetiq::app::ChangePassword;
 using kinetiq::app::ChangePasswordRequest;
 using kinetiq::app::InvalidCredentialsError;
-using kinetiq::crypto::Argon2PasswordHasher;
+using kinetiq::testsupport::FakePasswordHasher;
 using kinetiq::domain::User;
 using kinetiq::testsupport::InMemoryUserRepository;
 
 namespace {
 
-User seedUser(InMemoryUserRepository& users, Argon2PasswordHasher& hasher,
+User seedUser(InMemoryUserRepository& users, FakePasswordHasher& hasher,
               const std::string& email, const std::string& password) {
     User user;
     user.email = email;
@@ -32,7 +32,7 @@ User seedUser(InMemoryUserRepository& users, Argon2PasswordHasher& hasher,
 
 TEST(ChangePasswordTest, CorrectCurrentPassword_UpdatesHashSoNewPasswordVerifies) {
     InMemoryUserRepository users;
-    Argon2PasswordHasher hasher;
+    FakePasswordHasher hasher;
     ChangePassword changePassword(users, hasher);
 
     const User seeded = seedUser(users, hasher, "henry@example.com", "OldPass1");
@@ -47,7 +47,7 @@ TEST(ChangePasswordTest, CorrectCurrentPassword_UpdatesHashSoNewPasswordVerifies
 
 TEST(ChangePasswordTest, WrongCurrentPassword_ThrowsAndLeavesPasswordUnchanged) {
     InMemoryUserRepository users;
-    Argon2PasswordHasher hasher;
+    FakePasswordHasher hasher;
     ChangePassword changePassword(users, hasher);
 
     const User seeded = seedUser(users, hasher, "ivy@example.com", "OldPass1");
@@ -64,7 +64,7 @@ TEST(ChangePasswordTest, WrongCurrentPassword_ThrowsAndLeavesPasswordUnchanged) 
 // anything touches the repository or the hasher's verify step.
 TEST(ChangePasswordTest, WeakNewPassword_ThrowsAndLeavesPasswordUnchanged) {
     InMemoryUserRepository users;
-    Argon2PasswordHasher hasher;
+    FakePasswordHasher hasher;
     ChangePassword changePassword(users, hasher);
 
     const User seeded = seedUser(users, hasher, "jack@example.com", "OldPass1");
@@ -80,7 +80,7 @@ TEST(ChangePasswordTest, WeakNewPassword_ThrowsAndLeavesPasswordUnchanged) {
 // The 422 must point at the new password's field, not the register form's.
 TEST(ChangePasswordTest, WeakNewPassword_ErrorNamesNewPasswordField) {
     InMemoryUserRepository users;
-    Argon2PasswordHasher hasher;
+    FakePasswordHasher hasher;
     ChangePassword changePassword(users, hasher);
 
     const User seeded = seedUser(users, hasher, "kim@example.com", "OldPass1");

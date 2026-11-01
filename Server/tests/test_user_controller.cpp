@@ -8,14 +8,14 @@
 
 #include <chrono>
 
-#include "adapters/crypto/Argon2PasswordHasher.h"
+#include "support/FakePasswordHasher.h"
 #include "adapters/crypto/JwtTokenService.h"
 #include "http/controllers/AuthController.h"
 #include "http/controllers/UserController.h"
 #include "support/InMemoryProfileHistoryRepository.h"
 #include "support/InMemoryUserRepository.h"
 
-using kinetiq::crypto::Argon2PasswordHasher;
+using kinetiq::testsupport::FakePasswordHasher;
 using kinetiq::crypto::JwtTokenService;
 using kinetiq::testsupport::InMemoryUserRepository;
 
@@ -26,7 +26,7 @@ struct UserApi {
     crow::SimpleApp app;
     InMemoryUserRepository users;
     kinetiq::testsupport::InMemoryProfileHistoryRepository history;
-    Argon2PasswordHasher hasher;
+    FakePasswordHasher hasher;
     JwtTokenService tokens{"test-secret", std::chrono::seconds(3600)};
 
     UserApi() {

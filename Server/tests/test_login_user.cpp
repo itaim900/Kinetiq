@@ -5,7 +5,7 @@
 
 #include <gtest/gtest.h>
 
-#include "adapters/crypto/Argon2PasswordHasher.h"
+#include "support/FakePasswordHasher.h"
 #include "adapters/crypto/JwtTokenService.h"
 #include "app/LoginUser.h"
 #include "domain/User.h"
@@ -16,16 +16,16 @@
 using kinetiq::app::InvalidCredentialsError;
 using kinetiq::app::LoginUser;
 using kinetiq::app::LoginUserRequest;
-using kinetiq::crypto::Argon2PasswordHasher;
+using kinetiq::testsupport::FakePasswordHasher;
 using kinetiq::crypto::JwtTokenService;
 using kinetiq::domain::User;
 using kinetiq::testsupport::InMemoryUserRepository;
 
 namespace {
 
-// LoginUser verifies against a genuine hash, not a plaintext stand-in, so
-// every test needs a properly-hashed seed user.
-User seedUser(InMemoryUserRepository& users, Argon2PasswordHasher& hasher,
+// LoginUser verifies against a stored hash, so every test seeds a user whose
+// hash came from the same (fake) hasher.
+User seedUser(InMemoryUserRepository& users, FakePasswordHasher& hasher,
               const std::string& email, const std::string& password) {
     User user;
     user.email = email;
@@ -38,7 +38,7 @@ User seedUser(InMemoryUserRepository& users, Argon2PasswordHasher& hasher,
 
 TEST(LoginUserTest, CorrectCredentials_ReturnsUserAndToken) {
     InMemoryUserRepository users;
-    Argon2PasswordHasher hasher;
+    FakePasswordHasher hasher;
     JwtTokenService tokens("test-secret", std::chrono::seconds(3600));
     LoginUser loginUser(users, hasher, tokens);
 
@@ -58,7 +58,7 @@ TEST(LoginUserTest, CorrectCredentials_ReturnsUserAndToken) {
 
 TEST(LoginUserTest, WrongPassword_ThrowsInvalidCredentials) {
     InMemoryUserRepository users;
-    Argon2PasswordHasher hasher;
+    FakePasswordHasher hasher;
     JwtTokenService tokens("test-secret", std::chrono::seconds(3600));
     LoginUser loginUser(users, hasher, tokens);
 
@@ -72,7 +72,7 @@ TEST(LoginUserTest, WrongPassword_ThrowsInvalidCredentials) {
 // InvalidCredentialsError's comment in app/LoginUser.h.
 TEST(LoginUserTest, UnknownEmail_ThrowsInvalidCredentials) {
     InMemoryUserRepository users;
-    Argon2PasswordHasher hasher;
+    FakePasswordHasher hasher;
     JwtTokenService tokens("test-secret", std::chrono::seconds(3600));
     LoginUser loginUser(users, hasher, tokens);
 
