@@ -53,4 +53,12 @@ bool Argon2PasswordHasher::verify(const kinetiq::domain::PasswordHash& hash,
     return argon2id_verify(hash.encoded().c_str(), password.data(), password.size()) == ARGON2_OK;
 }
 
+const kinetiq::domain::PasswordHash& Argon2PasswordHasher::dummyHash() {
+    // Function-local static: computed on first use, and C++11 guarantees that
+    // first use is thread-safe. The "secret" doesn't need to be secret -- it is
+    // only compared when no real user exists, and that login fails either way.
+    static const kinetiq::domain::PasswordHash dummy = hash("kinetiq-timing-equaliser");
+    return dummy;
+}
+
 }  // namespace kinetiq::crypto

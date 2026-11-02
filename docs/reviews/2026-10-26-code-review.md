@@ -246,6 +246,21 @@ and the real adapter (backlog, pairs with #12).
 - Repository `update()` silently does nothing for a missing id (the services check first, so it's
   only reachable in a race).
 
+### 🟠 26. Profile history isn't saved together with the profile (from the ports review)
+`UpdateProfile` saves the user, *then* writes history rows — each on its own connection (ADR-0015).
+If a history write fails, the profile **is already saved** but the client gets an error, and the
+log misses a row. **Fix later (with #11):** one transaction for both, e.g. a unit-of-work adapter.
+
+## Fixed so far
+| Finding | Fix | Where |
+|---|---|---|
+| #6 + #19 birth date | strict digits + real calendar (leap years) | `ProfilePolicy.h`, branch `domain-review-fixes` |
+| #17 (cap only) | password 8–64 characters (counted as characters) | `PasswordPolicy.h` |
+| #21 (number limits) | workouts 0–21, minutes 1–300 in policy, Zod and DB (`0007`) | `ProfilePolicy.h`, `profileSchema.ts`, migration 0007 |
+| Login timing leak | unknown email verifies against a dummy hash | `LoginUser.h`, `IPasswordHasher::dummyHash` |
+| Swappable `verify` args | `PasswordHash` strong type | `domain/PasswordHash.h` |
+| Duplicate error classes | `ValidationError` base | `domain/ValidationError.h` |
+
 ## Suggested order (updated)
 0. **#14** — tiny, and it's a security hole: do it first.
 1. **#1 + #7 + #2 + #15 + #20** — typed JSON reading with field-named errors, reject unknown

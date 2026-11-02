@@ -60,14 +60,18 @@ This is what makes the codebase test-driven.
 Request: `{ email, password, display_name }`
 Response `201`: `{ user, access_token }`
 
-Password policy: **minimum 8 characters, at least one uppercase letter** (updated 2026-07-12,
-supersedes the earlier length-only/10-char decision).
+Password policy: **8–64 characters, at least one uppercase letter** (updated 2026-11-01; length
+is counted in characters, not bytes, so non-Latin passwords aren't penalised. 64 follows NIST
+SP 800-63B so password managers and passphrases fit). A failing password → `422` whose `errors`
+names the field (`password` here, `new_password` on change password) and whose `detail` is the
+specific sentence, e.g. `"password must be at most 64 characters"`.
 
 Test cases:
 - ✅ valid input → `201`, returns token; `password`/`password_hash` never appear in response
 - ❌ duplicate email → `409` (case-insensitive: `email` is `citext` — `Foo@x.com` collides with
   `foo@x.com`)
-- ❌ invalid email, password < 8 chars, or password with no uppercase letter → `422` with field errors
+- ❌ invalid email, password < 8 chars, > 64 chars, or with no uppercase letter → `422` with
+  `errors.password`
 - ❌ missing required field → `422`
 
 ### `POST /auth/login`
@@ -106,7 +110,8 @@ Test cases:
   in with the new password (and the old one no longer works)
 - ❌ wrong `current_password` → `401`, generic message (same "don't leak more than necessary"
   principle as login)
-- ❌ `new_password` fails the policy (< 8 chars or no uppercase) → `422`
+- ❌ `new_password` fails the policy (< 8 or > 64 chars, or no uppercase) → `422` with
+  `errors.new_password`
 - ❌ unauthenticated (missing/expired/invalid token) → `401`
 
 **Logout:** no endpoint. v1 uses short-lived, stateless JWTs with no server-side session (see
@@ -135,6 +140,10 @@ Test cases:
 - ❌ `{"unit_preference": null}` → `422` naming `unit_preference`
 - ❌ `weight_kg` negative or out of range → `422`
 - ❌ `experience_level` not in `{beginner,intermediate,advanced}` → `422`
+- ✅ `weekly_workout_goal` 0–21 (at most 3 a day) and `available_time_minutes` 1–300 → `200`;
+  ❌ `22` / `301` → `422` naming the field (the DB enforces the same limits, migration 0007)
+- ✅ `birth_date` `2000-02-29` → `200`; ❌ `2001-02-31`, `1900-02-29`, `2001-+1-05` → `422`
+  naming `birth_date` (strict `YYYY-MM-DD`, real calendar, years 1900–2100)
 - ❌ unauthenticated → `401`
 
 ---

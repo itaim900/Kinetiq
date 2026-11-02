@@ -27,6 +27,8 @@ Each item notes **why it waits** where that isn't obvious.
 - Reading the profile history back: "last known value" lookup (Phase 3 training engine), a
   weight-over-time chart
 - Keep unsaved edits when switching units mid-edit (today the form rebuilds and drops them)
+- Profile history should record **who** made each change (user / AI / admin) — add a `source`
+  column once anyone but the user can edit a profile (owner, 2026-11-01)
 
 ## Injuries & catalog
 - **Physio review** of the conditions catalog — secondary muscles are project judgement

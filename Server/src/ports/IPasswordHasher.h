@@ -21,6 +21,12 @@ public:
     // True if `password`, when hashed, matches `hash`.
     virtual bool verify(const kinetiq::domain::PasswordHash& hash,
                         const std::string& password) = 0;
+
+    // A valid hash of a fixed secret, computed once. LoginUser verifies
+    // against it when the email is unknown, so "no such user" costs the same
+    // time as "wrong password" and response timing can't reveal which emails
+    // are registered.
+    virtual const kinetiq::domain::PasswordHash& dummyHash() = 0;
 };
 
 }  // namespace kinetiq::ports

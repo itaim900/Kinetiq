@@ -13,6 +13,7 @@ class Argon2PasswordHasher : public kinetiq::ports::IPasswordHasher {
 public:
     kinetiq::domain::PasswordHash hash(const std::string& password) override;
     bool verify(const kinetiq::domain::PasswordHash& hash, const std::string& password) override;
+    const kinetiq::domain::PasswordHash& dummyHash() override;
 };
 
 }  // namespace kinetiq::crypto

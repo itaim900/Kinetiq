@@ -10,6 +10,17 @@ For durable/architectural facts, also update `docs/CONTEXT.md` (and add an ADR w
 
 ---
 
+## 2026-11-01/02 — VS Code
+- **Full server code review**, file by file with the owner (domain, ports): findings #14–#26 added
+  to `docs/reviews/2026-10-26-code-review.md`. Biggest: prod compose has no `JWT_SECRET` (#14).
+- **Branch `domain-review-fixes`** (spec + plan `2026-11-01-domain-review-fixes*`), TDD, 9 tasks:
+  `ValidationError` base; password 8–64 chars (owner wanted 20 → 64 per NIST); workouts 0–21,
+  minutes 1–300 (policy + Zod + migration 0007); real calendar dates; `PasswordHash` strong type;
+  `FakePasswordHasher`; unknown-email login verifies a dummy hash (timing leak).
+- Owner note → backlog: profile history should record *who* changed a value.
+- **Next:** auth redesign brainstorm (owner asked: 2-min access token + refresh token, JWT
+  alternatives, #14 fix), then hardening pass, then Slice 3.
+
 ## 2026-10-25 — VS Code
 - **Stage C finished:** injuries list/cards/healed/delete, injury form (condition search, locked
   catalog muscles, unlisted path), profile form — all TDD (client 94/94).

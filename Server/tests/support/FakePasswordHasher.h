@@ -23,8 +23,13 @@ public:
         return hash.encoded() == "fake$" + password;
     }
 
+    const kinetiq::domain::PasswordHash& dummyHash() override { return dummy_; }
+
     int hashCalls = 0;
     int verifyCalls = 0;
+
+private:
+    kinetiq::domain::PasswordHash dummy_{"fake$<dummy>"};
 };
 
 }  // namespace kinetiq::testsupport

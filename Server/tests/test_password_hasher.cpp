@@ -45,3 +45,13 @@ TEST(Argon2PasswordHasherTest, Hash_UsesADifferentSaltEachTime) {
     EXPECT_TRUE(hasher.verify(hashA, "same password"));
     EXPECT_TRUE(hasher.verify(hashB, "same password"));
 }
+
+// The dummy hash LoginUser verifies against for unknown emails must be a real
+// argon2 hash (so it costs the same as a real one) and computed only once.
+TEST(Argon2PasswordHasherTest, DummyHash_IsARealArgon2HashComputedOnce) {
+    Argon2PasswordHasher hasher;
+    const PasswordHash& first = hasher.dummyHash();
+    EXPECT_EQ(first.encoded().rfind("$argon2id$", 0), 0u);  // starts with
+    EXPECT_EQ(&first, &hasher.dummyHash());                 // same object
+    EXPECT_FALSE(hasher.verify(first, "StrongPass1"));
+}

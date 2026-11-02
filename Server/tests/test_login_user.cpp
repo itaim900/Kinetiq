@@ -79,3 +79,26 @@ TEST(LoginUserTest, UnknownEmail_ThrowsInvalidCredentials) {
     const LoginUserRequest request{"nobody@example.com", "WhateverPassword1"};
     EXPECT_THROW(loginUser.execute(request), InvalidCredentialsError);
 }
+
+// Timing-leak fix: both login failures run exactly one (slow, in production)
+// verify, so response time can't reveal whether an email is registered.
+TEST(LoginUserTest, UnknownEmail_StillVerifiesOnce_SoItTakesAsLongAsAWrongPassword) {
+    InMemoryUserRepository users;
+    FakePasswordHasher hasher;
+    JwtTokenService tokens("test-secret", std::chrono::seconds(3600));
+    LoginUser loginUser(users, hasher, tokens);
+
+    EXPECT_THROW(loginUser.execute({"nobody@example.com", "Whatever1"}), InvalidCredentialsError);
+    EXPECT_EQ(hasher.verifyCalls, 1);
+}
+
+TEST(LoginUserTest, WrongPassword_VerifiesOnce) {
+    InMemoryUserRepository users;
+    FakePasswordHasher hasher;
+    JwtTokenService tokens("test-secret", std::chrono::seconds(3600));
+    LoginUser loginUser(users, hasher, tokens);
+    seedUser(users, hasher, "erin@example.com", "RightPass1");
+
+    EXPECT_THROW(loginUser.execute({"erin@example.com", "WrongPass1"}), InvalidCredentialsError);
+    EXPECT_EQ(hasher.verifyCalls, 1);
+}
