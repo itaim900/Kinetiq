@@ -1,13 +1,12 @@
 // Slice 1 (#18): RegisterUser -- the first app/ service, orchestrating what
 // Slice 1 built so far (repository, hasher, token service) for the first
-// time. Tested against the in-memory fake repository (no DB needed); uses
-// the *real* hasher/token service for now -- a fast fake is worth
-// introducing once slow argon2 calls actually start to hurt (see
-// docs/phase-2-slice-1-auth.md).
+// time. Tested against the in-memory fake repository (no DB needed) and
+// FakePasswordHasher (argon2 is slow on purpose; the real hasher has its own
+// tests in test_password_hasher.cpp), with the real token service.
 
 #include <gtest/gtest.h>
 
-#include "adapters/crypto/Argon2PasswordHasher.h"
+#include "support/FakePasswordHasher.h"
 #include "adapters/crypto/JwtTokenService.h"
 #include "app/RegisterUser.h"
 #include "domain/PasswordPolicy.h"
@@ -18,14 +17,14 @@
 
 using kinetiq::app::RegisterUser;
 using kinetiq::app::RegisterUserRequest;
-using kinetiq::crypto::Argon2PasswordHasher;
+using kinetiq::testsupport::FakePasswordHasher;
 using kinetiq::crypto::JwtTokenService;
 using kinetiq::ports::DuplicateEmailError;
 using kinetiq::testsupport::InMemoryUserRepository;
 
 TEST(RegisterUserTest, ValidRequest_CreatesUserAndReturnsToken) {
     InMemoryUserRepository users;
-    Argon2PasswordHasher hasher;
+    FakePasswordHasher hasher;
     JwtTokenService tokens("test-secret", std::chrono::seconds(3600));
     RegisterUser registerUser(users, hasher, tokens);
 
@@ -38,7 +37,7 @@ TEST(RegisterUserTest, ValidRequest_CreatesUserAndReturnsToken) {
     EXPECT_FALSE(result.accessToken.empty());
 
     // The stored hash must never be the plaintext password.
-    EXPECT_NE(result.user.passwordHash, "StrongPass1");
+    EXPECT_NE(result.user.passwordHash.encoded(), "StrongPass1");
 
     // The issued token should verify back to exactly this user's id.
     const auto verifiedUserId = tokens.verify(result.accessToken);
@@ -50,7 +49,7 @@ TEST(RegisterUserTest, ValidRequest_CreatesUserAndReturnsToken) {
 // hashing, no repository write. "short" is 5 chars, well under the min 8.
 TEST(RegisterUserTest, WeakPassword_ThrowsWithoutTouchingRepositoryOrHasher) {
     InMemoryUserRepository users;
-    Argon2PasswordHasher hasher;
+    FakePasswordHasher hasher;
     JwtTokenService tokens("test-secret", std::chrono::seconds(3600));
     RegisterUser registerUser(users, hasher, tokens);
 
@@ -65,7 +64,7 @@ TEST(RegisterUserTest, WeakPassword_ThrowsWithoutTouchingRepositoryOrHasher) {
 // propagate untouched rather than swallowing or wrapping it.
 TEST(RegisterUserTest, DuplicateEmail_Throws) {
     InMemoryUserRepository users;
-    Argon2PasswordHasher hasher;
+    FakePasswordHasher hasher;
     JwtTokenService tokens("test-secret", std::chrono::seconds(3600));
     RegisterUser registerUser(users, hasher, tokens);
 

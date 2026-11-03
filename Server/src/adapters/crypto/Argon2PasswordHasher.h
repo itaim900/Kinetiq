@@ -11,8 +11,9 @@ namespace kinetiq::crypto {
 // encoded string, so two identical passwords never produce the same hash.
 class Argon2PasswordHasher : public kinetiq::ports::IPasswordHasher {
 public:
-    std::string hash(const std::string& password) override;
-    bool verify(const std::string& hash, const std::string& password) override;
+    kinetiq::domain::PasswordHash hash(const std::string& password) override;
+    bool verify(const kinetiq::domain::PasswordHash& hash, const std::string& password) override;
+    const kinetiq::domain::PasswordHash& dummyHash() override;
 };
 
 }  // namespace kinetiq::crypto

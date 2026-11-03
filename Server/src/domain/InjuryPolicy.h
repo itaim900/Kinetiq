@@ -1,22 +1,17 @@
 #pragma once
 
 #include "domain/Injury.h"
+#include "domain/ValidationError.h"
 
-#include <stdexcept>
 #include <string>
 
 namespace kinetiq::domain {
 
-// Thrown when an injury field is invalid. Carries the offending field's wire
-// name (e.g. "severity") for the RFC 9457 errors object.
-class InjuryValidationError : public std::runtime_error {
+// Thrown when an injury field is invalid (field name + message come from the
+// ValidationError base; `using` reuses its constructor).
+class InjuryValidationError : public ValidationError {
 public:
-    InjuryValidationError(std::string field, const std::string& message)
-        : std::runtime_error(message), field_(std::move(field)) {}
-    const std::string& field() const { return field_; }
-
-private:
-    std::string field_;
+    using ValidationError::ValidationError;
 };
 
 // Validates an injury's fields. Throws InjuryValidationError on the first

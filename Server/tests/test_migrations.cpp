@@ -59,3 +59,25 @@ TEST_F(DbTest, RejectsInvalidCheckConstraint) {
                   "VALUES ('bad@test.local', 'x', 'wizard')"),
         std::exception);
 }
+
+// Migration 0007 (spec 2026-11-01): the DB mirrors ProfilePolicy's limits, as a
+// last line of defence if a bug ever skips the domain check.
+TEST_F(DbTest, UsersTable_RejectsMoreThan21WeeklyWorkouts) {
+    if (!available()) GTEST_SKIP() << "no test database reachable";
+    EXPECT_THROW(tx().exec("INSERT INTO users (email, password_hash, weekly_workout_goal) "
+                           "VALUES ('limits1@test.local', 'x', 22)"),
+                 pqxx::check_violation);
+}
+
+TEST_F(DbTest, UsersTable_RejectsSessionsOver300Minutes) {
+    if (!available()) GTEST_SKIP() << "no test database reachable";
+    EXPECT_THROW(tx().exec("INSERT INTO users (email, password_hash, available_time_minutes) "
+                           "VALUES ('limits2@test.local', 'x', 301)"),
+                 pqxx::check_violation);
+}
+
+TEST_F(DbTest, UsersTable_AcceptsTheLimitsThemselves) {
+    if (!available()) GTEST_SKIP() << "no test database reachable";
+    EXPECT_NO_THROW(tx().exec("INSERT INTO users (email, password_hash, weekly_workout_goal, "
+                              "available_time_minutes) VALUES ('limits3@test.local', 'x', 21, 300)"));
+}

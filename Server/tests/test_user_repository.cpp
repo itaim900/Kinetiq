@@ -17,7 +17,7 @@ TEST(InMemoryUserRepositoryTest, SaveThenFindByEmail_ReturnsUser) {
     InMemoryUserRepository repo;
     User user;
     user.email = "alice@example.com";
-    user.passwordHash = "hashed";
+    user.passwordHash = kinetiq::domain::PasswordHash("hashed");
     user.displayName = "Alice";
 
     const User saved = repo.save(user);
@@ -94,18 +94,18 @@ TEST(InMemoryUserRepositoryTest, Update_ChangesStoredFields) {
     InMemoryUserRepository repo;
     User user;
     user.email = "grace@example.com";
-    user.passwordHash = "old-hash";
+    user.passwordHash = kinetiq::domain::PasswordHash("old-hash");
     const User saved = repo.save(user);
 
     User modified = saved;
-    modified.passwordHash = "new-hash";
+    modified.passwordHash = kinetiq::domain::PasswordHash("new-hash");
     repo.update(modified);
 
     const auto found = repo.findById(saved.id);
     ASSERT_TRUE(found.has_value());
-    EXPECT_EQ(found->passwordHash, "new-hash");
+    EXPECT_EQ(found->passwordHash.encoded(), "new-hash");
     // findByEmail must reflect the update too, not just findById.
-    EXPECT_EQ(repo.findByEmail("grace@example.com")->passwordHash, "new-hash");
+    EXPECT_EQ(repo.findByEmail("grace@example.com")->passwordHash.encoded(), "new-hash");
 }
 
 // Slice 2 (#19): the fake stores a whole User by value, so profile fields
@@ -114,7 +114,7 @@ TEST(InMemoryUserRepositoryTest, Update_PersistsProfileFields) {
     InMemoryUserRepository repo;
     User user;
     user.email = "mem-profile@example.com";
-    user.passwordHash = "x";
+    user.passwordHash = kinetiq::domain::PasswordHash("x");
     const User saved = repo.save(user);
 
     User modified = saved;

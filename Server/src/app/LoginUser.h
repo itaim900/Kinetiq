@@ -37,7 +37,12 @@ public:
 
     LoginUserResult execute(const LoginUserRequest& request) {
         const auto found = users_.findByEmail(request.email);
-        if (!found.has_value() || !hasher_.verify(found->passwordHash, request.password)) {
+        // Always run exactly one verify -- against the dummy hash when there is
+        // no such user -- so both failures take the same (deliberately slow)
+        // time and response timing can't reveal which emails are registered.
+        const bool passwordOk = hasher_.verify(
+            found.has_value() ? found->passwordHash : hasher_.dummyHash(), request.password);
+        if (!found.has_value() || !passwordOk) {
             throw InvalidCredentialsError();
         }
 

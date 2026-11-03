@@ -26,7 +26,7 @@ TEST(AutoCommitPgInjuryRepositoryTest, CreateThenList_AcrossSeparateConnections)
     AutoCommitPgUserRepository users(kinetiq::testing::testConnString());
     User u;
     u.email = email;
-    u.passwordHash = "x";
+    u.passwordHash = kinetiq::domain::PasswordHash("x");
     const long long userId = users.save(u).id;
 
     AutoCommitPgInjuryRepository injuries(kinetiq::testing::testConnString());

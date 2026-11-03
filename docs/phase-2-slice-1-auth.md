@@ -102,6 +102,9 @@ leaving the order accidental. (Resolved 2026-07-16: kept as-is, letting `Duplica
 propagate from `save()` unchanged — see Step 10 below.)
 
 ### 2026-07-16 — Login timing side-channel: accepted as a known v1 limitation
+> **Update 2026-11-02: fixed.** `LoginUser` now verifies against `IPasswordHasher::dummyHash()`
+> when the email is unknown, so both failures cost one argon2 verify (branch `domain-review-fixes`).
+
 `LoginUser`'s wrong-password and unknown-email cases return an identical error *message* (per the
 earlier no-enumeration decision), but not identical *timing* — the unknown-email path
 short-circuits before ever calling the hasher, so it responds in ~0ms vs. wrong-password's

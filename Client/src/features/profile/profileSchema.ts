@@ -11,6 +11,8 @@ export function isValidDate(s: string): boolean {
 
 const HEIGHT_MAX_CM = 300;
 const WEIGHT_MAX_KG = 500;
+const WEEKLY_WORKOUTS_MAX = 21; // 3 a day x 7
+const SESSION_MINUTES_MAX = 300; // 5 hours
 
 // Empty means "not set"; otherwise the number must pass `ok`.
 const blankOr = (ok: (n: number) => boolean) => (s: string) => s.trim() === '' || ok(Number(s));
@@ -48,10 +50,16 @@ export function makeProfileSchema(units: Units) {
     experience_level: z.string(),
     weekly_workout_goal: z
       .string()
-      .refine(blankOr((n) => Number.isInteger(n) && n >= 0), 'Use a whole number, 0 or more'),
+      .refine(
+        blankOr((n) => Number.isInteger(n) && n >= 0 && n <= WEEKLY_WORKOUTS_MAX),
+        `Use a whole number from 0 to ${WEEKLY_WORKOUTS_MAX}`,
+      ),
     available_time_minutes: z
       .string()
-      .refine(blankOr((n) => Number.isInteger(n) && n > 0), 'Use a whole number above 0'),
+      .refine(
+        blankOr((n) => Number.isInteger(n) && n >= 1 && n <= SESSION_MINUTES_MAX),
+        `Use a whole number from 1 to ${SESSION_MINUTES_MAX}`,
+      ),
     medications: z.string(),
   });
 }

@@ -53,6 +53,15 @@ describe('makeProfileSchema (mirrors ProfilePolicy)', () => {
     expect(r.success ? '' : r.error.issues[0].message).toMatch(/118\.1 in/);
   });
 
+  it('limits workouts to 0-21 and minutes to 1-300, like the server', () => {
+    expect(errorPaths('metric', { weekly_workout_goal: '21' })).toEqual([]);
+    expect(errorPaths('metric', { weekly_workout_goal: '22' })).toEqual(['weekly_workout_goal']);
+    expect(errorPaths('metric', { available_time_minutes: '300' })).toEqual([]);
+    expect(errorPaths('metric', { available_time_minutes: '301' })).toEqual([
+      'available_time_minutes',
+    ]);
+  });
+
   it('needs whole numbers for workouts and minutes', () => {
     expect(errorPaths('metric', { weekly_workout_goal: '2.5' })).toEqual(['weekly_workout_goal']);
     expect(errorPaths('metric', { available_time_minutes: '0' })).toEqual(['available_time_minutes']);

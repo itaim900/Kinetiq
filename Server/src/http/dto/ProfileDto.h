@@ -67,13 +67,16 @@ inline crow::json::wvalue profileToJson(const kinetiq::domain::User& user) {
 }
 
 // RFC 9457 validation error with a per-field `errors` map (contract shape).
-inline crow::response validationErrorResponse(const std::string& field,
-                                              const std::string& message) {
+// `detail` is the human sentence; screens that show only `detail` (register)
+// pass the specific message instead of the generic one.
+inline crow::response validationErrorResponse(
+    const std::string& field, const std::string& message,
+    const std::string& detail = "One or more fields are invalid.") {
     crow::json::wvalue json;
     json["type"] = "validation_error";
     json["title"] = "Validation Failed";
     json["status"] = 422;
-    json["detail"] = "One or more fields are invalid.";
+    json["detail"] = detail;
     json["errors"][field][0] = message;
     return crow::response(422, json);
 }

@@ -104,6 +104,7 @@ int main() {
     kinetiq::db::AutoCommitPgInjuryRepository injuries(buildConnString());
     kinetiq::db::AutoCommitPgCatalogRepository catalog(buildConnString());
     kinetiq::crypto::Argon2PasswordHasher hasher;
+    hasher.dummyHash();  // compute now, so the first unknown-email login isn't slower
     kinetiq::crypto::JwtTokenService tokens(jwtSecret, std::chrono::hours(24));
     kinetiq::http::registerAuthRoutes(app, users, hasher, tokens);
     kinetiq::http::registerUserRoutes(app, users, history, tokens);

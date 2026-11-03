@@ -270,7 +270,15 @@ in `docs/phase-2-slice-2-profile-injuries.md`; design in the spec (8 locked deci
   **Browser-verified** with Playwright on the real stack (found + fixed one bug: units switch after
   save lost the new values). Client 94/94, server 184/184. Build log in
   `docs/phase-2-slice-2-profile-injuries.md`; deferred items in **`docs/backlog.md`**.
-  **Next:** merge `slice-2-profile` → `main`, then **Slice 3 — Exercises + seed (#21, #22, #26)**.
+  Merged to `main` (PR #41, 2026-10-26).
+- **Code review + domain fixes (2026-10-26 → 11-01):** `docs/reviews/2026-10-26-code-review.md`
+  (26 findings). Branch `domain-review-fixes`: password **8–64 characters** (counted as characters),
+  workouts **0–21**/week, sessions **1–300** min (policy + Zod + DB migration `0007`), real calendar
+  birth dates, one `domain::ValidationError` base (field + message), `domain::PasswordHash` strong
+  type, login verifies a **dummy hash** for unknown emails (timing leak closed),
+  `FakePasswordHasher` in tests (suite 14.9 s → ~4 s). Spec/plan `2026-11-01-domain-review-fixes*`.
+  **Next:** auth/token redesign (short access token + refresh token; fixes review #14 + #16), then
+  the data-transport hardening pass (#1–#10), then **Slice 3 — Exercises + seed (#21, #22, #26)**.
 
 **Carry-overs worth remembering:**
 - Reuse the `AutoCommitPgUserRepository` pattern (connection-per-call, not one shared long-lived

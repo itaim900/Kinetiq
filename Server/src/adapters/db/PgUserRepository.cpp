@@ -8,7 +8,7 @@ kinetiq::domain::User rowToUser(const pqxx::row& row) {
     kinetiq::domain::User user;
     user.id = row["id"].as<long long>();
     user.email = row["email"].as<std::string>();
-    user.passwordHash = row["password_hash"].as<std::string>();
+    user.passwordHash = kinetiq::domain::PasswordHash(row["password_hash"].as<std::string>());
     user.displayName = row["display_name"].is_null() ? "" : row["display_name"].as<std::string>();
 
     if (!row["sex"].is_null()) user.sex = row["sex"].as<std::string>();
@@ -34,7 +34,7 @@ kinetiq::domain::User PgUserRepository::save(const kinetiq::domain::User& user) 
         const auto result = tx_.exec(
             "INSERT INTO users (email, password_hash, display_name) "
             "VALUES ($1, $2, $3) RETURNING id",
-            pqxx::params{user.email, user.passwordHash, user.displayName});
+            pqxx::params{user.email, user.passwordHash.encoded(), user.displayName});
 
         kinetiq::domain::User stored = user;
         stored.id = result[0][0].as<long long>();
@@ -74,7 +74,7 @@ void PgUserRepository::update(const kinetiq::domain::User& user) {
             "birth_date = $5, height_cm = $6, weight_kg = $7, experience_level = $8, "
             "unit_preference = $9, weekly_workout_goal = $10, available_time_minutes = $11, "
             "medications = $12 WHERE id = $13",
-            pqxx::params{user.email, user.passwordHash, user.displayName, user.sex, user.birthDate,
+            pqxx::params{user.email, user.passwordHash.encoded(), user.displayName, user.sex, user.birthDate,
                          user.heightCm, user.weightKg, user.experienceLevel, user.unitPreference,
                          user.weeklyWorkoutGoal, user.availableTimeMinutes, user.medications,
                          user.id});

@@ -24,7 +24,7 @@ namespace {
 long long seedUser(InMemoryUserRepository& repo) {
     User u;
     u.email = "seed@example.com";
-    u.passwordHash = "x";
+    u.passwordHash = kinetiq::domain::PasswordHash("x");
     u.displayName = "Seed";
     u.experienceLevel = "beginner";
     return repo.save(u).id;

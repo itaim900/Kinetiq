@@ -37,7 +37,7 @@ TEST(AutoCommitPgUserRepositoryTest, SaveThenFindByEmail_PersistsAcrossSeparateC
 
     User user;
     user.email = email;
-    user.passwordHash = "hashed";
+    user.passwordHash = kinetiq::domain::PasswordHash("hashed");
     user.displayName = "Auto Commit";
     const User saved = repo.save(user);
 
@@ -61,16 +61,16 @@ TEST(AutoCommitPgUserRepositoryTest, Update_PersistsAcrossSeparateConnections) {
 
     User user;
     user.email = email;
-    user.passwordHash = "old-hash";
+    user.passwordHash = kinetiq::domain::PasswordHash("old-hash");
     const User saved = repo.save(user);
 
     User modified = saved;
-    modified.passwordHash = "new-hash";
+    modified.passwordHash = kinetiq::domain::PasswordHash("new-hash");
     repo.update(modified);
 
     const auto found = repo.findById(saved.id);
     ASSERT_TRUE(found.has_value());
-    EXPECT_EQ(found->passwordHash, "new-hash");
+    EXPECT_EQ(found->passwordHash.encoded(), "new-hash");
 
     deleteTestUser(email);
 }
